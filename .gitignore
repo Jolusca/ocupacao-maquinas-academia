@@ -1,0 +1,11 @@
+# Compilação e ambiente de hardware
+.pio/
+.vscode/
+build/
+
+# Dependências e caches de software
+node_modules/
+__pycache__/
+venv/
+.env
+.json

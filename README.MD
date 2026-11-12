@@ -27,7 +27,8 @@ O sistema consiste em um protótipo de baixo custo projetado para monitorar a oc
 
 1. **Firmware**: Acesse o diretório `firmware/`, abra o projeto no seu ambiente de preferência e faça o upload do código para a placa.
 2. **Servidor**: Acesse a pasta `server/`, instale as dependências necessárias e execute o arquivo principal (`main.py` ou equivalente).
-3. **Web**: Acesse o diretório `web/`, inicialize o projeto e abra a aplicação no navegador para visualizar o monitoramento.
+
+
 
 
 ## Links úteis

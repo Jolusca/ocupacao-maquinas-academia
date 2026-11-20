@@ -1,6 +1,6 @@
 #ifndef MINITEST_H
 #define MINITEST_H
-/* Mini-framework de teste: sem dependencias, so <stdio.h>. */
+/* Mini-framework de teste: sem dependências, só <stdio.h>. */
 #include <stdio.h>
 
 static int mt_total = 0;

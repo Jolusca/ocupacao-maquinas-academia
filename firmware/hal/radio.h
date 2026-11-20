@@ -3,12 +3,12 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-/* ESP-NOW: radio Wi-Fi 2,4 GHz, sem roteador e sem conexao. Canal fixo (11 nos ensaios). */
+/* ESP-NOW: rádio Wi-Fi de 2,4 GHz, sem roteador e sem conexão. Canal fixo (11 nos ensaios). */
 
-/* Liga o radio no canal dado e registra o par (o outro no). */
+/* Liga o rádio no canal dado e registra o par (o outro nó). */
 bool radio_init(uint8_t channel, const uint8_t peer_mac[6]);
 
-/* Envia o texto do quadro ao par (unicast). Ate 3 tentativas.
+/* Envia o texto do quadro ao par (unicast). Até 3 tentativas.
  * true somente se o MAC do outro lado confirmou a entrega. */
 bool radio_send(const char *frame_text);
 

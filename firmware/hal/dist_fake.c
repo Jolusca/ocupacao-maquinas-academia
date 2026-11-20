@@ -1,55 +1,74 @@
 #include "dist_source.h"
 
-/* Roteiro da distancia simulada. Cada passo mantem a distancia por dur_ms.
- *   200 cm = ninguem na frente (ausencia)   60 cm = pessoa na frente (presenca)
- * Resultado esperado da maquina de estados (70 cm / 90 cm, 5 s e 90 s):
- *   0 a 20 s    LIVRE   (o passante de 2 s nao ocupa)
- *   ~25 s       vira OCUPADA (presenca por mais de 5 s)
- *   28 a 88 s   continua OCUPADA (descanso de 60 s, menos de 90 s)
- *   88 a 92 s   continua OCUPADA (a volta zera o cronometro de ausencia)
- *   ~182 s      vira LIVRE (ausencia por mais de 90 s)
- * O ciclo dura 192 s e se repete. */
+/* Roteiro da distância simulada. Cada passo mantém a distância por dur_ms.
+ *   200 cm = ninguém na frente (ausência)     60 cm = pessoa na frente (presença)
+ *
+ * Resultado esperado da máquina de estados (histerese 70/90 cm, 5 s para ocupar, 90 s para liberar):
+ *   - o passante de 2 s não ocupa a máquina;
+ *   - o treino de 8 s ocupa (passa de 5 s de presença);
+ *   - o descanso de 60 s não libera (menos de 90 s de ausência);
+ *   - a volta de 4 s zera o cronômetro de ausência;
+ *   - a ausência final de 100 s libera (passa de 90 s).
+ * Os instantes exatos ficam em dist_source.h; os _Static_assert abaixo impedem que a tabela
+ * e essas constantes saiam de sincronia. */
+
+enum {
+    D_IDLE_1   = 10000,
+    D_PASSERBY = 2000,
+    D_IDLE_2   = 8000,
+    D_WORKOUT  = 8000,
+    D_REST     = 60000,
+    D_RETURN   = 4000,
+    D_RELEASE  = 100000
+};
+
+_Static_assert(D_IDLE_1 + D_PASSERBY + D_IDLE_2 == DIST_FAKE_TRAINING_START_MS,
+               "o treino começa depois de D_IDLE_1 + D_PASSERBY + D_IDLE_2");
+_Static_assert(D_IDLE_1 + D_PASSERBY + D_IDLE_2 + D_WORKOUT + D_REST + D_RETURN == DIST_FAKE_FINAL_ABSENCE_START_MS,
+               "a ausência final começa depois da volta");
+_Static_assert(D_IDLE_1 + D_PASSERBY + D_IDLE_2 + D_WORKOUT + D_REST + D_RETURN + D_RELEASE == DIST_FAKE_CYCLE_MS,
+               "a soma dos passos é a duração do ciclo");
+
 typedef struct {
     int16_t     dist_cm;
     uint32_t    dur_ms;
-    const char *nome;
-} passo_t;
+    const char *name;
+} step_t;
 
-static const passo_t roteiro[] = {
-    { 200,  10000u, "livre" },
-    {  60,   2000u, "passante: 2 s a 60 cm" },
-    { 200,   8000u, "livre de novo" },
-    {  60,   8000u, "treino: 8 s a 60 cm" },
-    { 200,  60000u, "descanso: 60 s ausente" },
-    {  60,   4000u, "volta: 4 s a 60 cm" },
-    { 200, 100000u, "liberacao: 100 s ausente" },
+static const step_t script[] = {
+    { 200, D_IDLE_1,   "livre" },
+    {  60, D_PASSERBY, "passante: 2 s a 60 cm" },
+    { 200, D_IDLE_2,   "livre de novo" },
+    {  60, D_WORKOUT,  "treino: 8 s a 60 cm" },
+    { 200, D_REST,     "descanso: 60 s ausente" },
+    {  60, D_RETURN,   "volta: 4 s a 60 cm" },
+    { 200, D_RELEASE,  "liberacao: 100 s ausente" },
 };
 
-#define N_PASSOS ((unsigned)(sizeof roteiro / sizeof roteiro[0]))
+#define N_STEPS ((unsigned)(sizeof script / sizeof script[0]))
 
 uint32_t dist_fake_cycle_ms(void)
 {
-    uint32_t total = 0;
-    for (unsigned i = 0; i < N_PASSOS; i++) total += roteiro[i].dur_ms;
-    return total;
+    return DIST_FAKE_CYCLE_MS;
 }
 
-static const passo_t *passo_em(uint32_t now_ms)
+/* Acha o passo que está valendo em now_ms: reduz now_ms ao ciclo e anda pela tabela. */
+static const step_t *step_at(uint32_t now_ms)
 {
-    uint32_t t = now_ms % dist_fake_cycle_ms();
-    for (unsigned i = 0; i < N_PASSOS; i++) {
-        if (t < roteiro[i].dur_ms) return &roteiro[i];
-        t -= roteiro[i].dur_ms;
+    uint32_t t = now_ms % DIST_FAKE_CYCLE_MS;
+    for (unsigned i = 0; i < N_STEPS; i++) {
+        if (t < script[i].dur_ms) return &script[i];
+        t -= script[i].dur_ms;
     }
-    return &roteiro[0];
+    return &script[0];   /* inalcançável: os _Static_assert garantem que a soma fecha o ciclo */
 }
 
 int16_t dist_fake_read(uint32_t now_ms)
 {
-    return passo_em(now_ms)->dist_cm;
+    return step_at(now_ms)->dist_cm;
 }
 
 const char *dist_fake_step_name(uint32_t now_ms)
 {
-    return passo_em(now_ms)->nome;
+    return step_at(now_ms)->name;
 }

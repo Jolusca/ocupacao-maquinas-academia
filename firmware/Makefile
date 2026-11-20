@@ -1,4 +1,4 @@
-# Testes da logica do no (C puro, no PC). Uso: make test
+# Testes da lógica do nó (C puro, no PC). Uso: make test
 CC      ?= gcc
 CFLAGS  ?= -std=c11 -Wall -Wextra -Wpedantic -Werror -g -Icore -Ihal
 SRC     := core/frame.c core/occupancy.c core/scheduler.c hal/dist_fake.c

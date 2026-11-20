@@ -1,13 +1,13 @@
 #!/bin/sh
-# Compila (e opcionalmente grava) o firmware das placas com o arduino-cli.
+# Compila (e, se pedido, grava) o firmware das placas com o arduino-cli.
 #
-# O arduino-cli so compila os arquivos da pasta do sketch, entao este script monta uma pasta plana
-# (build/sketch) juntando app/, hal/ e core/. A pasta build/ nao vai para o git.
+# O arduino-cli só compila os arquivos da pasta do sketch, então este script monta uma pasta plana
+# (build/sketch) juntando app/, hal/ e core/. A pasta build/ não vai para o git.
 #
 # Uso:
 #   tools/build.sh                         compila
 #   tools/build.sh upload /dev/ttyACM0     compila e grava na porta indicada
-#   CORE_DIR=/outro/core tools/build.sh    usa outro core (so para teste local)
+#   CORE_DIR=/outro/core tools/build.sh    usa outro core (só para teste local)
 set -eu
 cd "$(dirname "$0")/.."
 

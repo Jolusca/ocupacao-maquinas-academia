@@ -3,6 +3,9 @@
 #include <stdio.h>
 #include "serial_out.h"
 
+/* Tamanho do buffer de uma linha de log; o que passar disso é cortado por vsnprintf. */
+static const size_t LOG_BUF_LEN = 200;
+
 void serial_emit_frame(const frame_t *f)
 {
     char buf[FRAME_MAX_LEN];
@@ -16,7 +19,7 @@ void serial_emit_frame(const frame_t *f)
 
 void log_line(const char *fmt, ...)
 {
-    char buf[200];
+    char buf[LOG_BUF_LEN];
     va_list ap;
     va_start(ap, fmt);
     vsnprintf(buf, sizeof buf, fmt, ap);

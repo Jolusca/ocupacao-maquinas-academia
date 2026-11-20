@@ -36,7 +36,7 @@ tools/build.sh                       # compila (esp32:esp32:esp32c6, CDCOnBoot=c
 tools/build.sh upload /dev/ttyACM0   # compila e grava na placa
 ```
 
-O `arduino-cli` só compila a pasta do sketch, então o `build.sh` junta `app/`, `hal/` e `core/` em `build/sketch/`. Opções em `app/config.h`: canal, MACs, `CFG_USAR_SENSOR` (0 = distância simulada, 1 = HC-SR04), pinos do sensor e `CFG_TIME_SCALE` (acelera o relógio para demonstrar, por exemplo 10 = dez vezes mais rápido).
+O `arduino-cli` só compila a pasta do sketch, então o `build.sh` junta `app/`, `hal/` e `core/` em `build/sketch/`. Opções em `app/config.h`: canal (`CFG_CHANNEL`), MACs, `CFG_USE_SENSOR` (0 = distância simulada, 1 = HC-SR04), pinos do sensor e `CFG_TIME_SCALE` (acelera o relógio para demonstrar, por exemplo 10 = dez vezes mais rápido).
 
 ## Ler a serial do gateway (no PC)
 

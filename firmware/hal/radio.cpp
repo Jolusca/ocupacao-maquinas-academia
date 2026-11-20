@@ -5,19 +5,43 @@
 #include <string.h>
 #include "radio.h"
 
+/* Tamanho máximo de um quadro ESP-NOW (versão 1 do protocolo). */
+static const size_t ESPNOW_MAX_PAYLOAD = 250;
+
+/* O MAC já reenvia o quadro sozinho, mas a confirmação pode se perder; por isso o envio é repetido
+ * até SEND_ATTEMPTS vezes. Mesmo assim um quadro pode se perder, e tudo bem: o sinal de vida repete
+ * o estado de 15 em 15 s, então o servidor não fica com informação errada por muito tempo. */
+static const int SEND_ATTEMPTS = 3;
+
+/* O callback de envio costuma chegar em poucos ms; passado este tempo, a tentativa conta como perdida. */
+static const uint32_t ACK_TIMEOUT_MS = 50;
+
+/* Pausa entre tentativas, para o rádio esvaziar a fila de transmissão. */
+static const uint32_t RETRY_GAP_MS = 10;
+
 static uint8_t s_peer[6];
-static volatile int s_send_status = -1;   /* -1 esperando, 0 falhou, 1 confirmado pelo MAC */
+
+/* Resultado da última tentativa: -1 esperando, 0 falhou, 1 confirmado pelo MAC do outro lado.
+ * É escrito pelo callback (tarefa do Wi-Fi) e lido por radio_send (laço principal), daí o volatile.
+ * Limitação conhecida: o callback não diz a que tentativa se refere. Um callback muito atrasado da
+ * tentativa N poderia ser lido como resposta da N+1; é raro com ACK_TIMEOUT_MS de 50 ms. */
+static volatile int s_send_status = -1;
+
 static void (*s_rx_cb)(const uint8_t *, const char *, int, int) = nullptr;
 
+/* Callback de envio: só registra o resultado. */
 static void on_sent(const wifi_tx_info_t *, esp_now_send_status_t status)
 {
     s_send_status = (status == ESP_NOW_SEND_SUCCESS) ? 1 : 0;
 }
 
+/* Callback de recepção, na tarefa do Wi-Fi. Copia o payload para um buffer próprio (o original
+ * deixa de valer quando a função retorna) e o termina com '\0', para o texto poder ser tratado
+ * como string. */
 static void on_recv(const esp_now_recv_info_t *info, const uint8_t *data, int len)
 {
-    if (!s_rx_cb || len <= 0 || len > 250) return;
-    char txt[251];
+    if (!s_rx_cb || len <= 0 || (size_t)len > ESPNOW_MAX_PAYLOAD) return;
+    char txt[ESPNOW_MAX_PAYLOAD + 1];
     memcpy(txt, data, (size_t)len);
     txt[len] = '\0';
     s_rx_cb(info->src_addr, txt, len, info->rx_ctrl->rssi);
@@ -26,10 +50,12 @@ static void on_recv(const esp_now_recv_info_t *info, const uint8_t *data, int le
 bool radio_init(uint8_t channel, const uint8_t peer_mac[6])
 {
     memcpy(s_peer, peer_mac, 6);
+
+    /* O ESP-NOW usa a interface Wi-Fi, mas não precisa estar conectado a roteador nenhum. */
     WiFi.mode(WIFI_STA);
     WiFi.disconnect();
-    esp_wifi_set_ps(WIFI_PS_NONE);
-    esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+    esp_wifi_set_ps(WIFI_PS_NONE);   /* sem economia de energia: o rádio fica sempre pronto para receber */
+    esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);   /* os dois nós precisam estar no mesmo canal */
 
     if (esp_now_init() != ESP_OK) return false;
     esp_now_register_send_cb(on_sent);
@@ -37,24 +63,24 @@ bool radio_init(uint8_t channel, const uint8_t peer_mac[6])
 
     esp_now_peer_info_t pi = {};
     memcpy(pi.peer_addr, s_peer, 6);
-    pi.channel = 0;                 /* 0 = acompanha o canal atual */
-    pi.encrypt = false;
+    pi.channel = 0;      /* 0 = acompanha o canal atual da interface */
+    pi.encrypt = false;  /* sem criptografia: o quadro é só "N02,1,17" */
     return esp_now_add_peer(&pi) == ESP_OK;
 }
 
 bool radio_send(const char *frame_text)
 {
     size_t n = strlen(frame_text);
-    if (n == 0 || n > 250) return false;
+    if (n == 0 || n > ESPNOW_MAX_PAYLOAD) return false;
 
-    for (int tentativa = 0; tentativa < 3; tentativa++) {
+    for (int attempt = 0; attempt < SEND_ATTEMPTS; attempt++) {
         s_send_status = -1;
         if (esp_now_send(s_peer, (const uint8_t *)frame_text, n) == ESP_OK) {
             uint32_t t0 = millis();
-            while (s_send_status < 0 && (millis() - t0) < 50) delay(1);
+            while (s_send_status < 0 && (millis() - t0) < ACK_TIMEOUT_MS) delay(1);
             if (s_send_status == 1) return true;
         }
-        delay(10);
+        delay(RETRY_GAP_MS);
     }
     return false;
 }

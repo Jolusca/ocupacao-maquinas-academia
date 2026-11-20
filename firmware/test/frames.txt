@@ -1,0 +1,28 @@
+# Vetores do quadro "N<id>,<estado>,<seq>". Usado pelo teste em C e, depois, pelo parser em Python do servidor.
+# Formato: TIPO|TEXTO|NODE|STATE|SEQ   (separador '|'; '\n' e '\r' no TEXTO valem como quebra de linha)
+#   OK    = decodifica com sucesso e devolve NODE, STATE, SEQ
+#   FMT   = erro de formato (FRAME_ERR_FORMAT);  RANGE = formato certo, valor fora da faixa (FRAME_ERR_RANGE)
+#   Para FMT e RANGE os tres ultimos campos ficam '-'.
+OK|N02,1,17|2|1|17
+OK|N01,0,0|1|0|0
+OK|N99,1,65535|99|1|65535
+OK|N02,1,17\n|2|1|17
+OK|N02,1,17\r\n|2|1|17
+FMT||-|-|-
+FMT|N2,1,17|-|-|-
+FMT|N100,1,17|-|-|-
+FMT|n02,1,17|-|-|-
+FMT|X02,1,17|-|-|-
+FMT|N0A,1,17|-|-|-
+FMT|N02,1|-|-|-
+FMT|N02,1,17,9|-|-|-
+FMT|N02,,17|-|-|-
+FMT|N02,1,|-|-|-
+FMT|N02,1,-5|-|-|-
+FMT|N02, 1,17|-|-|-
+FMT|N02,1,17x|-|-|-
+FMT|# rssi=-74|-|-|-
+RANGE|N00,1,17|-|-|-
+RANGE|N02,2,17|-|-|-
+RANGE|N02,1,65536|-|-|-
+RANGE|N02,1,99999999999|-|-|-

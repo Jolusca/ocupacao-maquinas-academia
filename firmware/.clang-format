@@ -1,0 +1,38 @@
+# Estilo do firmware (ver CODING_STANDARD.md). Baseado nas regras de formatação do BARR-C:2018.
+# Uso: make format (aplica) e make format-check (só confere, sai com erro se houver diferença).
+Language: Cpp
+BasedOnStyle: LLVM
+
+# Indentação: 4 espaços, sem tabs.
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ContinuationIndentWidth: 4
+
+# Linhas de até 80 colunas.
+ColumnLimit: 80
+
+# Chaves: sempre presentes, e a de abertura em linha própria (estilo Allman).
+BreakBeforeBraces: Allman
+InsertBraces: true
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+
+# Espaços e alinhamento.
+SpaceBeforeParens: ControlStatements
+IndentExternBlock: NoIndent
+PointerAlignment: Right
+AlignAfterOpenBracket: Align
+AlignOperands: Align
+AlignConsecutiveMacros: Consecutive
+SpacesBeforeTrailingComments: 2
+Cpp11BracedListStyle: false
+
+# Não reordenar includes (a ordem importa no Arduino) nem quebrar textos de log.
+SortIncludes: Never
+BreakStringLiterals: false
+ReflowComments: true
+MaxEmptyLinesToKeep: 1

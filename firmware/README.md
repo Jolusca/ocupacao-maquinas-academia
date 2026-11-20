@@ -26,6 +26,10 @@ make clean
 
 O `test_cenarios` junta o roteiro simulado (`hal/dist_fake.c`) com o `core/` e confere quando o estado muda (ocupa em ~25 s e libera em ~182 s). Precisa de `gcc` e `make` (no Windows, use o WSL ou o MSYS2). Os `.c` de `core/` começam como *stubs* e os testes **falham de propósito**: o trabalho é implementar até aparecer `TODOS OS TESTES PASSARAM`. Não altere os testes para fazê-los passar.
 
+## Estilo de código
+
+O código segue o [padrão de código do firmware](CODING_STANDARD.md), baseado no BARR-C:2018. Antes de abrir um pull request, rode `make format && make test` (o `make format-check` só confere, sem alterar). O estilo está em `.clang-format` e `.editorconfig`.
+
 ## Compilar e gravar as placas
 
 Precisa do `arduino-cli` com o core `esp32:esp32` (3.x). O mesmo firmware serve para as duas placas: o papel (gateway `N01` ou sensor `N02`) sai do MAC, na tabela de `app/config.h`.

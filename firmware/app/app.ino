@@ -88,6 +88,9 @@ static void enviar(const frame_t &f)
 void setup()
 {
     Serial.begin(115200);
+    /* Nunca bloquear se ninguem estiver lendo a USB (no sem computador, ou servidor parado): descarta o
+     * log em vez de atrasar o laco. Sem isso o sinal de vida do N02 saiu a cada 18 s em vez de 15 s. */
+    Serial.setTxTimeoutMs(0);
     uint32_t t0 = millis();
     while (!Serial && (millis() - t0) < 1500) delay(10);    /* USB nativo: espera o host um instante, sem travar */
 

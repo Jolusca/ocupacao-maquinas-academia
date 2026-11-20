@@ -3,8 +3,8 @@
 
 - mostra os quadros N<id>,<estado>,<seq>; linhas que comecam com "# " sao log (use -v para ver);
 - por no: conta quadros e procura lacunas no seq (quadros perdidos);
-- abre a porta SEM mexer em DTR/RTS e avisa se a placa reiniciou ao abrir (o uptime do log
-  "# up=" volta a zero ou aparece "# boot").
+- abre a porta sem desligar DTR/RTS (isso reiniciaria a placa) e avisa se mesmo assim ela reiniciou
+  ao abrir (o uptime do log "# up=" volta a zero ou aparece "# boot").
 
 Uso: python3 tools/le_serial.py [PORTA] [-t SEGUNDOS] [-v]
 """
@@ -32,9 +32,10 @@ def abrir(porta):
     s.timeout = 0.5
     s.dsrdtr = False
     s.rtscts = False
-    s.dtr = False   # definidos antes do open(): a porta abre sem acionar o reset da placa
-    s.rts = False
+    # NAO mexer em DTR/RTS. O Linux ja abre a porta com os dois acionados, que e o estado neutro no
+    # USB-Serial/JTAG. Desligar um e depois o outro passa pelo estado "reset" e reinicia a placa.
     s.open()
+    s.reset_input_buffer()   # descarta o que ficou no buffer (pode vir uma linha cortada)
     return s
 
 
@@ -63,8 +64,11 @@ def main():
             continue
         if linha.startswith("#"):
             if "boot" in linha:
-                reinicio = True
-                print("   (a placa reiniciou: apareceu '# boot')")
+                if time.time() - inicio > 3:   # nos primeiros segundos pode ser so uma linha antiga do buffer da placa
+                    reinicio = True
+                    print("   (a placa reiniciou: apareceu '# boot')")
+                else:
+                    print("   (linha de boot antiga, do buffer da placa; nao conta como reinicio)")
             m = UP.search(linha)
             if m:
                 up = int(m.group(1))

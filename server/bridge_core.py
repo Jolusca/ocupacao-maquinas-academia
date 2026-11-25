@@ -5,13 +5,18 @@
 #   - telemetry: um documento por MUDANÇA de estado (e o primeiro quadro de cada nó).
 #     O sinal de vida (a cada 15 s) só atualiza last_seen em nodes, para o histórico
 #     não encher de linhas repetidas.
+#
+# O rastreador é usado por duas threads (a que lê a serial e a da API), por isso tem trava.
 
+import threading
+from collections import deque
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from server.frame_parser import Frame, parse_frame
 
 OFFLINE_PADRAO_S = 60  # 4 sinais de vida (15 s) sem chegar; medido em 20/11: 1,5% de perda a 10 m
+HISTORICO_MAX = 500    # mudanças de estado guardadas na memória, por nó
 
 
 @dataclass(frozen=True)
@@ -37,6 +42,8 @@ class RastreadorNos:
         self._limite = timedelta(seconds=offline_apos_s)
         self._nomes = dict(nomes or {})
         self._nos = {}  # node -> {"state", "seq", "last_seen", "online"}
+        self._historico = {}  # node -> deque de documentos de telemetry
+        self._trava = threading.RLock()
 
     def nome(self, node):
         return self._nomes.get(node, f"maquina_{node}")
@@ -55,37 +62,52 @@ class RastreadorNos:
     def receber(self, quadro: Frame, agora: datetime):
         # in: quadro válido e o instante de chegada (datetime com fuso).
         # out: Atualizacao com o que gravar.
-        anterior = self._nos.get(quadro.node)
+        with self._trava:
+            anterior = self._nos.get(quadro.node)
 
-        if anterior is not None and anterior["seq"] == quadro.seq:
-            # Repetido (o rádio reenviou porque perdeu o ACK): só prova que o nó está vivo.
-            anterior["last_seen"] = agora
-            anterior["online"] = True
-            return Atualizacao(self._doc_no(quadro.node), None)
+            if anterior is not None and anterior["seq"] == quadro.seq:
+                # Repetido (o rádio reenviou porque perdeu o ACK): só prova que o nó está vivo.
+                anterior["last_seen"] = agora
+                anterior["online"] = True
+                return Atualizacao(self._doc_no(quadro.node), None)
 
-        mudou = anterior is None or anterior["state"] != quadro.state
-        self._nos[quadro.node] = {
-            "state": quadro.state,
-            "seq": quadro.seq,
-            "last_seen": agora,
-            "online": True,
-        }
-        telemetria = None
-        if mudou:
-            telemetria = {
-                "node": quadro.node,
+            mudou = anterior is None or anterior["state"] != quadro.state
+            self._nos[quadro.node] = {
                 "state": quadro.state,
                 "seq": quadro.seq,
-                "ts": agora,
+                "last_seen": agora,
+                "online": True,
             }
-        return Atualizacao(self._doc_no(quadro.node), telemetria)
+            telemetria = None
+            if mudou:
+                telemetria = {
+                    "node": quadro.node,
+                    "state": quadro.state,
+                    "seq": quadro.seq,
+                    "ts": agora,
+                }
+                fila = self._historico.setdefault(quadro.node, deque(maxlen=HISTORICO_MAX))
+                fila.append(telemetria)
+            return Atualizacao(self._doc_no(quadro.node), telemetria)
 
     def verificar_offline(self, agora: datetime):
         # out: lista de Atualizacao dos nós que passaram do limite sem quadro agora.
         # Cada nó é avisado uma vez; quando voltar a enviar, receber() o marca online de novo.
         saidas = []
-        for node, e in self._nos.items():
-            if e["online"] and agora - e["last_seen"] > self._limite:
-                e["online"] = False
-                saidas.append(Atualizacao(self._doc_no(node), None))
+        with self._trava:
+            for node, e in self._nos.items():
+                if e["online"] and agora - e["last_seen"] > self._limite:
+                    e["online"] = False
+                    saidas.append(Atualizacao(self._doc_no(node), None))
         return saidas
+
+    def snapshot(self):
+        # out: lista com o documento atual de cada nó, em ordem de número (cópias; seguro para a API).
+        with self._trava:
+            return [self._doc_no(n) for n in sorted(self._nos)]
+
+    def historico(self, node, limite=50):
+        # out: as últimas mudanças de estado do nó (da memória), da mais recente para a mais antiga.
+        with self._trava:
+            lista = list(self._historico.get(node, ()))
+        return [dict(d) for d in reversed(lista[-limite:])]

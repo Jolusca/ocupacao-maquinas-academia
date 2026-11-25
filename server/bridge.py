@@ -14,11 +14,13 @@ import glob
 import os
 import random
 import sys
+import threading
 import time
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import quote_plus
 
+from server.api import criar_servidor
 from server.bridge_core import (
     OFFLINE_PADRAO_S,
     Atualizacao,
@@ -85,6 +87,11 @@ class MongoSink:
 
         cliente = MongoClient(uri, serverSelectionTimeoutMS=5000)
         return cls(cliente[os.getenv("MONGODB_DB", "gym_occupancy")])
+
+    def historico(self, node, limite=50):
+        # Últimas mudanças de estado do nó, da mais recente para a mais antiga (usado pela API).
+        cursor = self._telemetria.find({"node": node}, {"_id": 0}).sort("ts", -1).limit(limite)
+        return list(cursor)
 
     def aplicar(self, a: Atualizacao):
         # Falha de rede não pode derrubar a ponte; só avisa (sem imprimir a URI nem a mensagem
@@ -204,10 +211,19 @@ def main():
                     help=f"segundos sem quadro para marcar offline (padrão {OFFLINE_PADRAO_S})")
     ap.add_argument("--nome", action="append", metavar="N=NOME",
                     help="nome da máquina de um nó, ex.: --nome 2=supino (padrão maquina_<n>)")
+    ap.add_argument("--sem-api", action="store_true", help="não abrir a API de leitura")
+    ap.add_argument("--api-host", default="127.0.0.1",
+                    help="onde a API ouve (padrão 127.0.0.1: só o próprio notebook; 0.0.0.0: a rede)")
+    ap.add_argument("--api-porta", type=int, default=8000, help="porta da API (padrão 8000)")
     args = ap.parse_args()
 
     sink = TelaSink() if args.dry_run else MongoSink.do_ambiente()
     rastreador = RastreadorNos(args.offline_apos, ler_nomes(args.nome))
+    if not args.sem_api:
+        servidor = criar_servidor(rastreador, args.api_host, args.api_porta,
+                                  getattr(sink, "historico", None))
+        threading.Thread(target=servidor.serve_forever, daemon=True).start()
+        log(f"API em http://{args.api_host}:{args.api_porta}/machines")
     linhas = linhas_simuladas() if args.simular else linhas_serial(args.porta)
     try:
         executar(linhas, rastreador, sink)

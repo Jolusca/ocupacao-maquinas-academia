@@ -87,6 +87,23 @@ class RastreadorTests(unittest.TestCase):
         a = self.r.receber(Frame(2, 1, 2), em(110))
         self.assertTrue(a.no["online"])
 
+    def test_snapshot_ordenado_e_copia(self):
+        self.r.receber(Frame(3, 1, 1), em(0))
+        self.r.receber(Frame(2, 0, 1), em(0))
+        lista = self.r.snapshot()
+        self.assertEqual([d["node"] for d in lista], [2, 3])
+        lista[0]["state"] = 99  # mexer na cópia não altera o rastreador
+        self.assertEqual(self.r.snapshot()[0]["state"], 0)
+
+    def test_historico_em_memoria_mais_recente_primeiro(self):
+        self.r.receber(Frame(2, 0, 1), em(0))
+        self.r.receber(Frame(2, 0, 2), em(15))  # sinal de vida: não entra no histórico
+        self.r.receber(Frame(2, 1, 3), em(20))
+        h = self.r.historico(2)
+        self.assertEqual([d["state"] for d in h], [1, 0])
+        self.assertEqual(len(self.r.historico(2, limite=1)), 1)
+        self.assertEqual(self.r.historico(9), [])
+
     def test_nomes_personalizados(self):
         r = RastreadorNos(nomes={2: "supino"})
         self.assertEqual(r.receber(Frame(2, 0, 0), em(0)).no["name"], "supino")

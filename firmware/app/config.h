@@ -28,7 +28,7 @@ static const uint8_t CFG_MAC_SENSOR[6] = { 0x10, 0x51, 0xDB, 0x1C, 0x61, 0x64 };
 /* --- Distância --- */
 
 /* 0 = distância simulada (dist_fake), 1 = HC-SR04. */
-#define CFG_USE_SENSOR 0
+#define CFG_USE_SENSOR 1
 
 /* TODO: confirmar os pinos com a pinagem da placa (evitar GPIO8, GPIO9 e
  * GPIO15). O ECHO sai em 5 V e precisa de divisor de tensão até 3,3 V. */

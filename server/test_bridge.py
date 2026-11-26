@@ -5,7 +5,7 @@
 import unittest
 from datetime import datetime, timedelta, timezone
 
-from server.bridge import MongoSink, executar
+from server.bridge import MongoSink, executar, montar_uri
 from server.bridge_core import RastreadorNos, linha_para_quadro
 from server.frame_parser import Frame, FrameFormatError, FrameRangeError
 
@@ -166,6 +166,30 @@ class MongoSinkTests(unittest.TestCase):
 
         sink = MongoSink({"nodes": Quebrada(), "telemetry": self.tel})
         sink.aplicar(RastreadorNos().receber(Frame(2, 1, 4), em(0)))  # não levanta
+
+
+class MontarUriTests(unittest.TestCase):
+    def test_marcadores_do_atlas(self):
+        env = {"MONGODB_URI": "mongodb+srv://<db_username>:<db_password>@cluster.exemplo.net/?x=1",
+               "MONGODB_USERNAME": "ponte", "MONGODB_PASSWORD": "p@ss/w:rd"}
+        self.assertEqual(montar_uri(env), "mongodb+srv://ponte:p%40ss%2Fw%3Ard@cluster.exemplo.net/?x=1")
+
+    def test_marcadores_antigos(self):
+        env = {"MONGODB_URI": "mongodb+srv://<username>:<password>@c.net/",
+               "MONGODB_USERNAME": "u", "MONGODB_PASSWORD": "s"}
+        self.assertEqual(montar_uri(env), "mongodb+srv://u:s@c.net/")
+
+    def test_uri_completa_nao_e_alterada(self):
+        env = {"MONGODB_URI": "mongodb+srv://u:s@c.net/"}
+        self.assertEqual(montar_uri(env), "mongodb+srv://u:s@c.net/")
+
+    def test_monta_com_usuario_e_senha_no_host_padrao(self):
+        uri = montar_uri({"MONGODB_USERNAME": "u", "MONGODB_PASSWORD": "s"})
+        self.assertEqual(uri, "mongodb+srv://u:s@ocupacaomaquinas.wsoskab.mongodb.net/")
+
+    def test_sem_credenciais_pede_o_env(self):
+        with self.assertRaises(SystemExit):
+            montar_uri({})
 
 
 if __name__ == "__main__":

@@ -40,6 +40,32 @@ def log(texto):
     print(texto, file=sys.stderr, flush=True)
 
 
+# ---------------------------------------------------------------- conexão com o Mongo
+
+HOST_PADRAO = "ocupacaomaquinas.wsoskab.mongodb.net"  # o mesmo de server/api_mongo.py
+
+
+def montar_uri(env):
+    # in: dicionário de variáveis (os.environ). out: URI do Mongo pronta (nunca é impressa).
+    # Aceita a URI com os marcadores do Atlas (<db_username>/<db_password>) ou os antigos
+    # (<username>/<password>); sem MONGODB_URI, monta com usuário e senha no host do cluster.
+    usuario = env.get("MONGODB_USERNAME")
+    senha = env.get("MONGODB_PASSWORD")
+    uri = env.get("MONGODB_URI")
+    if not uri:
+        if not (usuario and senha):
+            raise SystemExit("Defina MONGODB_URI (ou MONGODB_USERNAME e MONGODB_PASSWORD) no .env, ou use --dry-run.")
+        host = env.get("MONGODB_HOST", HOST_PADRAO)
+        return f"mongodb+srv://{quote_plus(usuario)}:{quote_plus(senha)}@{host}/"
+    for marcador in ("<db_username>", "<username>"):
+        if usuario and marcador in uri:
+            uri = uri.replace(marcador, quote_plus(usuario))
+    for marcador in ("<db_password>", "<password>"):
+        if senha and marcador in uri:
+            uri = uri.replace(marcador, quote_plus(senha))
+    return uri
+
+
 # ---------------------------------------------------------------- destinos (sinks)
 
 class TelaSink:
@@ -75,18 +101,19 @@ class MongoSink:
         except ImportError:
             pass  # sem python-dotenv, vale o que já estiver no ambiente
 
-        uri = os.getenv("MONGODB_URI")
-        if not uri:
-            raise SystemExit("Defina MONGODB_URI no .env (ou use --dry-run).")
-        usuario = os.getenv("MONGODB_USERNAME")
-        senha = os.getenv("MONGODB_PASSWORD")
-        if usuario and "<username>" in uri:
-            uri = uri.replace("<username>", quote_plus(usuario))
-        if senha and "<password>" in uri:
-            uri = uri.replace("<password>", quote_plus(senha))
-
+        uri = montar_uri(os.environ)
         cliente = MongoClient(uri, serverSelectionTimeoutMS=5000)
-        return cls(cliente[os.getenv("MONGODB_DB", "gym_occupancy")])
+        sink = cls(cliente[os.getenv("MONGODB_DB", "gym_occupancy")])
+        sink._cliente = cliente
+        return sink
+
+    def testar(self):
+        # Só diz se conectou; em caso de falha mostra o tipo do erro, nunca a URI nem a senha.
+        try:
+            self._cliente.admin.command("ping")
+            return True, "conectou ao Mongo"
+        except Exception as erro:
+            return False, f"falhou ({type(erro).__name__})"
 
     def historico(self, node, limite=50):
         # Últimas mudanças de estado do nó, da mais recente para a mais antiga (usado pela API).
@@ -211,12 +238,17 @@ def main():
                     help=f"segundos sem quadro para marcar offline (padrão {OFFLINE_PADRAO_S})")
     ap.add_argument("--nome", action="append", metavar="N=NOME",
                     help="nome da máquina de um nó, ex.: --nome 2=supino (padrão maquina_<n>)")
+    ap.add_argument("--testar-banco", action="store_true", help="só testa a conexão com o Mongo e sai")
     ap.add_argument("--sem-api", action="store_true", help="não abrir a API de leitura")
     ap.add_argument("--api-host", default="127.0.0.1",
                     help="onde a API ouve (padrão 127.0.0.1: só o próprio notebook; 0.0.0.0: a rede)")
     ap.add_argument("--api-porta", type=int, default=8000, help="porta da API (padrão 8000)")
     args = ap.parse_args()
 
+    if args.testar_banco:
+        ok, msg = MongoSink.do_ambiente().testar()
+        print(msg)
+        raise SystemExit(0 if ok else 1)
     sink = TelaSink() if args.dry_run else MongoSink.do_ambiente()
     rastreador = RastreadorNos(args.offline_apos, ler_nomes(args.nome))
     if not args.sem_api:

@@ -118,7 +118,14 @@ class MongoSink:
     def historico(self, node, limite=50):
         # Últimas mudanças de estado do nó, da mais recente para a mais antiga (usado pela API).
         cursor = self._telemetria.find({"node": node}, {"_id": 0}).sort("ts", -1).limit(limite)
-        return list(cursor)
+        docs = list(cursor)
+        for d in docs:
+            # O Mongo guarda em UTC, mas o pymongo devolve a data sem fuso; sem isto a API
+            # imprimiria "…T14:15:12" e a página leria como hora local (3 h errada no Brasil).
+            ts = d.get("ts")
+            if isinstance(ts, datetime) and ts.tzinfo is None:
+                d["ts"] = ts.replace(tzinfo=timezone.utc)
+        return docs
 
     def aplicar(self, a: Atualizacao):
         # Falha de rede não pode derrubar a ponte; só avisa (sem imprimir a URI nem a mensagem

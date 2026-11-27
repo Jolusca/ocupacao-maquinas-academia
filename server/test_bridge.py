@@ -141,10 +141,50 @@ class ColecaoFalsa:
         self.insercoes.append(doc)
 
 
+class CursorFalso:
+    # Imita find().sort().limit() do pymongo, que devolve datas SEM fuso (naive, em UTC).
+    def __init__(self, docs):
+        self._docs = docs
+
+    def sort(self, *a, **k):
+        return self
+
+    def limit(self, n):
+        self._docs = self._docs[:n]
+        return self
+
+    def __iter__(self):
+        return iter(self._docs)
+
+
+class ColecaoComHistorico(ColecaoFalsa):
+    def __init__(self, docs):
+        super().__init__()
+        self._docs = docs
+
+    def find(self, *a, **k):
+        return CursorFalso([dict(d) for d in self._docs])
+
+
 class MongoSinkTests(unittest.TestCase):
     def setUp(self):
         self.nos, self.tel = ColecaoFalsa(), ColecaoFalsa()
         self.sink = MongoSink({"nodes": self.nos, "telemetry": self.tel})
+
+    def test_historico_devolve_ts_em_utc_com_fuso(self):
+        # O Mongo guarda em UTC mas o pymongo devolve a data sem fuso; a página leria como hora local.
+        naive = datetime(2026, 11, 27, 14, 15, 12, 779000)
+        sink = MongoSink({"nodes": self.nos, "telemetry": ColecaoComHistorico([
+            {"node": 2, "state": 1, "seq": 3, "ts": naive}])})
+        ts = sink.historico(2)[0]["ts"]
+        self.assertEqual(ts.tzinfo, timezone.utc)
+        self.assertEqual(ts.isoformat(), "2026-11-27T14:15:12.779000+00:00")
+
+    def test_historico_mantem_ts_que_ja_tem_fuso(self):
+        com_fuso = datetime(2026, 11, 27, 14, 0, 0, tzinfo=timezone.utc)
+        sink = MongoSink({"nodes": self.nos, "telemetry": ColecaoComHistorico([
+            {"node": 2, "state": 0, "seq": 1, "ts": com_fuso}])})
+        self.assertEqual(sink.historico(2)[0]["ts"], com_fuso)
 
     def test_grava_no_por_upsert_e_telemetria(self):
         a = RastreadorNos().receber(Frame(2, 1, 4), em(0))

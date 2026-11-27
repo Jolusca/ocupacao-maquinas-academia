@@ -115,6 +115,10 @@ class MongoSink:
         except Exception as erro:
             return False, f"falhou ({type(erro).__name__})"
 
+    def ler_nos(self):
+        # Os documentos de "nodes" (um por nó), para a ponte retomar o estado ao reiniciar.
+        return list(self._nos.find({}, {"_id": 0}))
+
     def historico(self, node, limite=50):
         # Últimas mudanças de estado do nó, da mais recente para a mais antiga (usado pela API).
         cursor = self._telemetria.find({"node": node}, {"_id": 0}).sort("ts", -1).limit(limite)
@@ -136,6 +140,23 @@ class MongoSink:
                 self._telemetria.insert_one(dict(a.telemetria))
         except Exception as erro:
             log(f"erro ao gravar N{a.no['node']:02d} no Mongo ({type(erro).__name__})")
+
+
+def carregar_estado_anterior(sink, rastreador, avisar=log):
+    # Ao iniciar, retoma o último estado de cada nó gravado no banco, para o primeiro quadro
+    # depois de um reinício não virar uma "mudança" falsa no histórico. Sem banco (--dry-run) não
+    # há o que carregar. Falha ao ler não derruba a ponte (e a mensagem do erro não é mostrada:
+    # pode trazer o endereço do cluster).
+    # out: quantos nós foram carregados.
+    ler = getattr(sink, "ler_nos", None)
+    if ler is None:
+        return 0
+    try:
+        return rastreador.carregar(ler())
+    except Exception as erro:
+        avisar(f"não consegui carregar o estado anterior do banco ({type(erro).__name__}); "
+               "o primeiro quadro de cada nó será gravado como mudança")
+        return 0
 
 
 # ---------------------------------------------------------------- fontes de linhas
@@ -258,6 +279,10 @@ def main():
         raise SystemExit(0 if ok else 1)
     sink = TelaSink() if args.dry_run else MongoSink.do_ambiente()
     rastreador = RastreadorNos(args.offline_apos, ler_nomes(args.nome))
+    if not args.simular:  # a simulação sempre começa do zero
+        n = carregar_estado_anterior(sink, rastreador)
+        if n:
+            log(f"estado anterior carregado do banco: {n} nó(s)")
     if not args.sem_api:
         servidor = criar_servidor(rastreador, args.api_host, args.api_porta,
                                   getattr(sink, "historico", None))

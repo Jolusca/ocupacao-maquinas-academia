@@ -5,7 +5,7 @@
 import unittest
 from datetime import datetime, timedelta, timezone
 
-from server.bridge import MongoSink, executar, montar_uri
+from server.bridge import MongoSink, carregar_estado_anterior, executar, montar_uri
 from server.bridge_core import RastreadorNos, linha_para_quadro
 from server.frame_parser import Frame, FrameFormatError, FrameRangeError
 
@@ -34,6 +34,53 @@ class LinhaParaQuadroTests(unittest.TestCase):
 class RastreadorTests(unittest.TestCase):
     def setUp(self):
         self.r = RastreadorNos(offline_apos_s=60)
+
+    # --- estado anterior (carregado do Mongo quando a ponte reinicia) ---
+
+    def anterior(self, node=2, state=1, seq=40, last_seen=None, **extra):
+        # Um documento de "nodes" como a ponte o grava; o pymongo devolve a data sem fuso.
+        doc = {"node": node, "name": f"maquina_{node}", "state": state, "seq": seq,
+               "last_seen": last_seen or datetime(2026, 11, 25, 11, 59, 0), "online": True}
+        doc.update(extra)
+        return doc
+
+    def test_carregar_mesmo_estado_nao_gera_telemetria_no_primeiro_quadro(self):
+        self.assertEqual(self.r.carregar([self.anterior(state=1)]), 1)
+        a = self.r.receber(Frame(2, 1, 41), em(0))
+        self.assertIsNone(a.telemetria)  # reiniciar a ponte não é uma mudança de estado
+        self.assertTrue(a.no["online"])
+        self.assertEqual(a.no["seq"], 41)
+
+    def test_carregar_estado_diferente_gera_telemetria(self):
+        self.r.carregar([self.anterior(state=1)])
+        a = self.r.receber(Frame(2, 0, 41), em(0))  # mudou enquanto a ponte estava parada
+        self.assertEqual(a.telemetria, {"node": 2, "state": 0, "seq": 41, "ts": em(0)})
+
+    def test_carregar_deixa_o_no_offline_ate_chegar_um_quadro(self):
+        self.r.carregar([self.anterior(state=1)])
+        doc = self.r.snapshot()[0]
+        self.assertFalse(doc["online"])  # ainda não ouvimos o nó desde que a ponte iniciou
+        self.assertEqual(doc["state"], 1)
+        self.assertEqual(doc["seq"], 40)
+        self.assertEqual(doc["last_seen"], datetime(2026, 11, 25, 11, 59, 0, tzinfo=timezone.utc))
+        self.assertEqual(self.r.verificar_offline(em(1000)), [])  # e não avisa offline de novo
+
+    def test_carregar_ignora_documentos_fora_do_formato(self):
+        velhos = [
+            {"name": "maquina_1", "ocupacao": True, "timestamp": datetime(2026, 11, 25)},  # simulador
+            self.anterior(node=3, state=7),             # estado inválido
+            self.anterior(node=4, seq="x"),             # seq inválido
+            self.anterior(node=True, state=1),          # bool não é número de nó
+            self.anterior(node=5, state=0, seq=9),      # este é válido
+        ]
+        self.assertEqual(self.r.carregar(velhos), 1)
+        self.assertEqual([d["node"] for d in self.r.snapshot()], [5])
+
+    def test_carregar_usa_a_data_atual_se_last_seen_faltar(self):
+        doc = self.anterior(state=0)
+        del doc["last_seen"]
+        self.r.carregar([doc], agora=em(5))
+        self.assertEqual(self.r.snapshot()[0]["last_seen"], em(5))
 
     def test_primeiro_quadro_cria_no_e_telemetria(self):
         a = self.r.receber(Frame(2, 0, 0), em(0))
@@ -179,6 +226,37 @@ class MongoSinkTests(unittest.TestCase):
         ts = sink.historico(2)[0]["ts"]
         self.assertEqual(ts.tzinfo, timezone.utc)
         self.assertEqual(ts.isoformat(), "2026-11-27T14:15:12.779000+00:00")
+
+    def test_ler_nos_devolve_os_documentos_de_nodes(self):
+        docs = [{"node": 2, "state": 1, "seq": 3}]
+        sink = MongoSink({"nodes": ColecaoComHistorico(docs), "telemetry": self.tel})
+        self.assertEqual(sink.ler_nos(), docs)
+
+    def test_carregar_estado_anterior_usa_o_que_esta_no_banco(self):
+        docs = [{"node": 2, "name": "maquina_2", "state": 1, "seq": 3,
+                 "last_seen": datetime(2026, 11, 27, 14, 0, 0), "online": True}]
+        sink = MongoSink({"nodes": ColecaoComHistorico(docs), "telemetry": self.tel})
+        r = RastreadorNos()
+        self.assertEqual(carregar_estado_anterior(sink, r, lambda texto: None), 1)
+        self.assertEqual(r.snapshot()[0]["state"], 1)
+
+    def test_carregar_estado_anterior_sem_ler_nos_nao_faz_nada(self):
+        r = RastreadorNos()
+        self.assertEqual(carregar_estado_anterior(ColetorSink(), r, lambda texto: None), 0)
+        self.assertEqual(r.snapshot(), [])
+
+    def test_banco_fora_do_ar_nao_derruba_a_partida(self):
+        class Quebrada(ColecaoFalsa):
+            def find(self, *a, **k):
+                raise RuntimeError("banco fora do ar")
+
+        avisos = []
+        sink = MongoSink({"nodes": Quebrada(), "telemetry": self.tel})
+        r = RastreadorNos()
+        self.assertEqual(carregar_estado_anterior(sink, r, avisos.append), 0)  # não levanta
+        self.assertEqual(len(avisos), 1)
+        self.assertIn("RuntimeError", avisos[0])
+        self.assertNotIn("fora do ar", avisos[0])  # a mensagem do erro pode ter endereço do cluster
 
     def test_historico_mantem_ts_que_ja_tem_fuso(self):
         com_fuso = datetime(2026, 11, 27, 14, 0, 0, tzinfo=timezone.utc)

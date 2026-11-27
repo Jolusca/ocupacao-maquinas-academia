@@ -11,7 +11,7 @@
 import threading
 from collections import deque
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from server.frame_parser import Frame, parse_frame
 
@@ -47,6 +47,32 @@ class RastreadorNos:
 
     def nome(self, node):
         return self._nomes.get(node, f"maquina_{node}")
+
+    def carregar(self, docs, agora=None):
+        # Chamado ao iniciar, com os documentos de "nodes" que já estão no banco.
+        # Sem isto a memória começa vazia e o primeiro quadro de cada nó parece uma "mudança",
+        # gravando uma linha de telemetry repetida a cada reinício da ponte.
+        # Os nós entram como OFFLINE (ainda não ouvimos nenhum desde que a ponte iniciou); o
+        # primeiro quadro de cada um os põe online. Documentos fora do formato (por exemplo
+        # os do simulador antigo: name/ocupacao/timestamp) são ignorados.
+        # out: quantos nós foram carregados.
+        agora = agora or datetime.now(timezone.utc)
+        carregados = 0
+        with self._trava:
+            for d in docs:
+                node, state, seq = d.get("node"), d.get("state"), d.get("seq")
+                if not all(isinstance(v, int) and not isinstance(v, bool) for v in (node, state, seq)):
+                    continue
+                if state not in (0, 1):
+                    continue
+                visto = d.get("last_seen")
+                if not isinstance(visto, datetime):
+                    visto = agora
+                elif visto.tzinfo is None:
+                    visto = visto.replace(tzinfo=timezone.utc)  # o pymongo devolve sem fuso (UTC)
+                self._nos[node] = {"state": state, "seq": seq, "last_seen": visto, "online": False}
+                carregados += 1
+        return carregados
 
     def _doc_no(self, node):
         e = self._nos[node]

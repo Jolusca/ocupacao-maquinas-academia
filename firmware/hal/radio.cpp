@@ -21,7 +21,9 @@ static const uint32_t ACK_TIMEOUT_MS = 50;
 /* Pausa entre tentativas, para o rádio esvaziar a fila de transmissão. */
 static const uint32_t RETRY_GAP_MS = 10;
 
+static const uint8_t BROADCAST_MAC[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 static uint8_t s_peer[6];
+static bool s_has_peer = false;
 
 /* Resultado da última tentativa: -1 esperando, 0 falhou, 1 confirmado pelo MAC
  * do outro lado. É escrito pelo callback (tarefa do Wi-Fi) e lido por
@@ -58,19 +60,31 @@ static void on_recv(const esp_now_recv_info_t *info, const uint8_t *data,
     s_rx_cb(info->src_addr, text, len, info->rx_ctrl->rssi);
 }
 
-bool radio_init(uint8_t channel, const uint8_t peer_mac[6])
+/* Registra um endereço como par do ESP-NOW (sem criptografia: o quadro é só
+ * "N02,1,17"). Canal 0 = acompanha o canal atual da interface. */
+static bool add_peer(const uint8_t mac[6])
 {
     esp_now_peer_info_t peer_info = {};
 
-    memcpy(s_peer, peer_mac, 6);
+    if (esp_now_is_peer_exist(mac))
+    {
+        return true;
+    }
+    memcpy(peer_info.peer_addr, mac, 6);
+    peer_info.channel = 0;
+    peer_info.encrypt = false;
+    return esp_now_add_peer(&peer_info) == ESP_OK;
+}
 
+bool radio_init(uint8_t channel)
+{
     /* O ESP-NOW usa a interface Wi-Fi, mas não precisa estar conectado a
      * roteador nenhum. */
     WiFi.mode(WIFI_STA);
     WiFi.disconnect();
     /* Sem economia de energia: o rádio fica sempre pronto para receber. */
     esp_wifi_set_ps(WIFI_PS_NONE);
-    /* Os dois nós precisam estar no mesmo canal. */
+    /* Todos os nós precisam estar no mesmo canal. */
     esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
 
     if (esp_now_init() != ESP_OK)
@@ -79,47 +93,79 @@ bool radio_init(uint8_t channel, const uint8_t peer_mac[6])
     }
     esp_now_register_send_cb(on_sent);
     esp_now_register_recv_cb(on_recv);
+    return add_peer(BROADCAST_MAC);
+}
 
-    memcpy(peer_info.peer_addr, s_peer, 6);
-    /* Canal 0 = acompanha o canal atual da interface. */
-    peer_info.channel = 0;
-    /* Sem criptografia: o quadro é só "N02,1,17". */
-    peer_info.encrypt = false;
-    return esp_now_add_peer(&peer_info) == ESP_OK;
+bool radio_set_peer(const uint8_t mac[6])
+{
+    if (!add_peer(mac))
+    {
+        return false;
+    }
+    memcpy(s_peer, mac, 6);
+    s_has_peer = true;
+    return true;
+}
+
+void radio_clear_peer(void)
+{
+    s_has_peer = false;
+}
+
+/* Uma tentativa de envio a `dest`; espera o resultado do MAC por ACK_TIMEOUT_MS. */
+static bool send_once(const uint8_t dest[6], const char *text, size_t len)
+{
+    uint32_t start_ms;
+
+    s_send_status = -1;
+    /* Cast: a API do ESP-NOW recebe bytes; o texto é ASCII. */
+    if (esp_now_send(dest, (const uint8_t *)text, len) != ESP_OK)
+    {
+        return false;
+    }
+    start_ms = millis();
+    while ((s_send_status < 0) && ((millis() - start_ms) < ACK_TIMEOUT_MS))
+    {
+        delay(1);
+    }
+    return s_send_status == 1;
 }
 
 bool radio_send(const char *frame_text)
 {
     size_t frame_len = strlen(frame_text);
     int attempt;
-    uint32_t start_ms;
 
     if ((frame_len == 0) || (frame_len > ESPNOW_MAX_PAYLOAD))
     {
         return false;
     }
+    if (!s_has_peer)
+    {
+        /* Sem coletor conhecido: broadcast, sem confirmação. */
+        return send_once(BROADCAST_MAC, frame_text, frame_len);
+    }
 
     for (attempt = 0; attempt < SEND_ATTEMPTS; attempt++)
     {
-        s_send_status = -1;
-        /* Cast: a API do ESP-NOW recebe bytes; o texto é ASCII. */
-        if (esp_now_send(s_peer, (const uint8_t *)frame_text, frame_len) ==
-            ESP_OK)
+        if (send_once(s_peer, frame_text, frame_len))
         {
-            start_ms = millis();
-            while ((s_send_status < 0) &&
-                   ((millis() - start_ms) < ACK_TIMEOUT_MS))
-            {
-                delay(1);
-            }
-            if (s_send_status == 1)
-            {
-                return true;
-            }
+            return true;
         }
         delay(RETRY_GAP_MS);
     }
     return false;
+}
+
+bool radio_broadcast(const char *text)
+{
+    size_t len = strlen(text);
+
+    if ((len == 0) || (len > ESPNOW_MAX_PAYLOAD))
+    {
+        return false;
+    }
+    return send_once(BROADCAST_MAC, text, len);
 }
 
 void radio_set_rx_cb(void (*cb)(const uint8_t *, const char *, int, int))

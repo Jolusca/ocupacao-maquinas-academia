@@ -4,10 +4,10 @@
 #   make format-check   só confere o estilo; sai com erro se algum arquivo estiver fora do padrão
 CC      ?= gcc
 CFLAGS  ?= -std=c11 -Wall -Wextra -Wpedantic -Werror -g -Icore -Ihal
-SRC     := core/frame.c core/occupancy.c core/scheduler.c hal/dist_fake.c
-TESTS   := test_frame test_occupancy test_scheduler test_cenarios
+SRC     := core/frame.c core/occupancy.c core/scheduler.c core/link.c core/command.c hal/dist_fake.c
+TESTS   := test_frame test_occupancy test_scheduler test_link test_command test_cenarios
 BIN     := $(addprefix build/,$(TESTS))
-HDR     := core/frame.h core/occupancy.h core/scheduler.h hal/dist_fake.h test/minitest.h
+HDR     := core/frame.h core/occupancy.h core/scheduler.h core/link.h core/command.h hal/dist_fake.h test/minitest.h
 
 # O core/ ainda não entra no formatador: é de quem o implementa e será incluído
 # depois da junção das branches.

@@ -1,0 +1,413 @@
+% Caderno de montagem: esquemático modular (estilo de editor de circuito), protoboard, tabelas e pinout.
+% 4 páginas A4 na horizontal. Compile com: tectonic caderno_montagem.tex
+% Layout da ESP32-C6 SuperMini (informado pelo Marcos, conferido na placa dele):
+%   esquerda (de cima p/ baixo): TX, RX, 0, 1, 2, 3, 4, 5, 6, 7
+%   direita  (de cima p/ baixo): 5V, GND, 3V3, 20, 19, 18, 15, 14, 9, 8
+%   meio da placa: 21, 22, 12, 13, 23
+\documentclass[10pt,a4paper,landscape]{article}
+\usepackage{fontspec}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazilian]{babel}
+\usepackage[margin=0.8cm]{geometry}
+\usepackage{mathptmx}
+\usepackage{xcolor}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta}
+\newfontfamily\codfont{DejaVu Sans Mono}[Scale=0.86]
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcommand{\cod}[1]{{\codfont\hyphenchar\font=-1 \frenchspacing\detokenize{#1}}}
+
+\definecolor{azul}{RGB}{31,73,125}
+\definecolor{verde}{RGB}{27,127,92}
+\definecolor{laranja}{RGB}{178,106,0}
+\definecolor{vermelho}{RGB}{192,57,43}
+\definecolor{cinza}{RGB}{82,96,109}
+\definecolor{marrom}{RGB}{121,67,20}
+\definecolor{ouro}{RGB}{201,164,52}
+\definecolor{corpo}{RGB}{222,196,150}
+\definecolor{fiov}{RGB}{0,128,0}      % fios do esquemático
+\definecolor{simb}{RGB}{128,0,0}      % contorno dos símbolos
+\definecolor{ci}{RGB}{255,253,235}    % preenchimento dos símbolos
+
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+
+% ---------- símbolos de folha ----------
+\newcommand{\gnd}[2]{%
+  \draw[thick] (#1,#2) -- (#1,{#2-0.15});
+  \draw[thick] ({#1-0.25},{#2-0.15}) -- ({#1+0.25},{#2-0.15});
+  \draw[thick] ({#1-0.16},{#2-0.23}) -- ({#1+0.16},{#2-0.23});
+  \draw[thick] ({#1-0.07},{#2-0.31}) -- ({#1+0.07},{#2-0.31});}
+\newcommand{\vcc}[3]{%
+  \draw[thick] (#1,#2) -- (#1,{#2+0.3});
+  \draw[thick] ({#1-0.22},{#2+0.3}) -- ({#1+0.22},{#2+0.3});
+  \node[font=\codfont\scriptsize\bfseries,anchor=south] at (#1,{#2+0.33}) {#3};}
+
+% ---------- um módulo completo ----------
+% \modulo{ox}{R(c)}{U}{S}{R(eco)}{R(b)}{J}{título}{texto do USB}
+\newcommand{\modulo}[9]{%
+\begin{scope}[shift={(#1,0)}]
+  \node[anchor=west,font=\bfseries\small] at (0.1,16.9) {#8};
+
+  % ===== sensor: conector de 4 pinos =====
+  \draw[sym] (0.8,7.7) rectangle (2.2,11.6);
+  \node[font=\bfseries\scriptsize,anchor=south] at (1.5,12.05) {#4};
+  \node[font=\codfont\fontsize{6.5}{7}\selectfont,text=cinza,anchor=south] at (1.5,11.68) {HC-SR04};
+  \foreach \yy/\nm/\num in {11.0/VCC/1,10.1/TRIG/2,9.2/ECHO/3,8.3/GND/4}{
+    \draw[sym] (2.2,\yy) -- (2.8,\yy);
+    \node[pnum,anchor=south] at (2.55,{\yy+0.03}) {\num};
+    \node[pf,anchor=west] at (0.88,\yy) {\nm};}
+  % alimentação do sensor
+  \draw[fio] (2.8,11.0) -- (3.3,11.0);  \vcc{3.3}{11.0}{+5V}
+  \draw[fio] (2.8,8.3) -- (3.3,8.3);    \gnd{3.3}{8.3}
+  % TRIG até o GPIO0 (L3)
+  \draw[fio] (2.8,10.1) -- (4.4,10.1) -- (4.4,12.8) -- (5.9,12.8);
+  \node[font=\codfont\fontsize{6.5}{7}\selectfont\bfseries,anchor=south east] at (4.35,10.2) {TRIG};
+  % ECHO: R1, ponto J, GPIO1 (L4) e R2+R3 até o terra
+  \draw[fio] (2.8,9.2) -- (3.2,9.2);
+  \draw[sym,fill=white] (3.2,9.02) rectangle (4.2,9.38);
+  \node[font=\scriptsize\bfseries,anchor=south] at (3.7,9.45) {#5\ 1k};
+  \draw[fio] (4.2,9.2) -- (4.9,9.2) -- (4.9,11.9) -- (5.9,11.9);
+  \draw[fio] (4.9,9.2) -- (4.9,8.7);
+  \draw[sym,fill=white] (4.72,7.9) rectangle (5.08,8.7);
+  \node[font=\scriptsize\bfseries,anchor=east] at (4.62,8.3) {#6\ 1k};
+  \draw[fio] (4.9,7.9) -- (4.9,7.6);
+  \draw[sym,fill=white] (4.72,6.8) rectangle (5.08,7.6);
+  \node[font=\scriptsize\bfseries,anchor=east] at (4.62,7.2) {#2\ 1k};
+  \draw[fio] (4.9,6.8) -- (4.9,6.4);  \gnd{4.9}{6.4}
+  \fill[fiov] (4.9,9.2) circle (2.3pt);
+  \node[font=\codfont\fontsize{6.5}{7}\selectfont\bfseries,anchor=north east] at (4.8,12.7) {GPIO0};
+  \node[font=\codfont\fontsize{6.5}{7}\selectfont\bfseries,anchor=north east] at (4.8,11.8) {GPIO1};
+
+  % ===== placa ESP32-C6 SuperMini =====
+  \draw[sym] (6.4,3.4) rectangle (10.4,15.4);
+  \node[anchor=west,font=\bfseries\scriptsize] at (6.4,15.75) {#3};
+  \node[anchor=west,font=\scriptsize,text=cinza] at (7.0,15.75) {ESP32-C6 SuperMini};
+  \foreach \i/\nm/\st/\pn in {0/{TX}/pn/L1,1/{RX}/pn/L2,2/{GPIO0}/pu/L3,3/{GPIO1}/pu/L4,4/{GPIO2}/pn/L5,
+      5/{GPIO3}/pn/L6,6/{GPIO4}/pn/L7,7/{GPIO5}/pn/L8,8/{GPIO6}/pn/L9,9/{GPIO7}/pn/L10}{
+    \pgfmathsetmacro{\yy}{14.6-0.9*\i}
+    \draw[sym] (5.9,\yy) -- (6.4,\yy);
+    \node[pnum,anchor=south] at (6.15,{\yy+0.03}) {\pn};
+    \node[pf,\st,anchor=west] at (6.5,\yy) {\nm};}
+  \foreach \i/\nm/\st/\pn in {0/{5V}/pu/R1,1/{GND}/pu/R2,2/{3V3}/pn/R3,3/{GPIO20}/pn/R4,4/{GPIO19}/pn/R5,
+      5/{GPIO18}/pn/R6,6/{GPIO15}/pn/R7,7/{GPIO14}/pn/R8,8/{GPIO9}/pn/R9,9/{GPIO8}/pn/R10}{
+    \pgfmathsetmacro{\yy}{14.6-0.9*\i}
+    \draw[sym] (10.4,\yy) -- (10.9,\yy);
+    \node[pnum,anchor=south] at (10.65,{\yy+0.03}) {\pn};
+    \node[pf,\st,anchor=east] at (10.3,\yy) {\nm};}
+  \foreach \j/\nm/\pn in {0/{GPIO21}/M1,1/{GPIO22}/M2,2/{GPIO12}/M3,3/{GPIO13}/M4,4/{GPIO23}/M5}{
+    \pgfmathsetmacro{\xx}{6.9+0.7*\j}
+    \draw[sym] (\xx,3.4) -- (\xx,2.9);
+    \node[pnum,anchor=north] at (\xx,2.88) {\pn};
+    \node[pf,pn,rotate=90,anchor=west] at (\xx,3.5) {\nm};}
+  \node[font=\fontsize{6}{7}\selectfont,text=cinza,anchor=north] at (8.4,2.45) {meio da placa (não usados)};
+  % antena
+  \draw[sym] (9.9,15.4) -- (9.9,16.0);
+  \draw[sym] (9.9,16.0) -- (9.6,16.35); \draw[sym] (9.9,16.0) -- (10.2,16.35);
+  % alimentação da placa
+  \draw[fio] (10.9,14.6) -- (11.4,14.6);  \vcc{11.4}{14.6}{+5V}
+  \draw[fio] (10.9,13.7) -- (11.4,13.7);  \gnd{11.4}{13.7}
+
+  % ===== conector USB-C (energia) =====
+  \draw[sym] (11.9,8.6) rectangle (12.9,10.6);
+  \node[font=\bfseries\scriptsize,anchor=south] at (12.4,10.72) {#7};
+  \node[font=\fontsize{6}{7}\selectfont,text=cinza,anchor=south] at (12.4,11.02) {USB-C};
+  \foreach \yy/\nm/\num in {10.0/5V/1,9.2/GND/2}{
+    \draw[sym] (11.4,\yy) -- (11.9,\yy);
+    \node[pnum,anchor=south] at (11.65,{\yy+0.03}) {\num};
+    \node[pf,anchor=east] at (12.85,\yy) {\nm};}
+  \draw[fio] (11.4,10.0) -- (11.4,10.0);  \vcc{11.4}{10.0}{+5V}
+  \gnd{11.4}{9.2}
+  \node[anchor=north west,font=\fontsize{6}{7}\selectfont,text width=1.9cm,align=left,text=cinza] at (11.4,8.45)
+    {#9};
+\end{scope}}
+
+\begin{document}
+
+% =============================== PÁGINA 1 ===============================
+\begin{center}
+\resizebox{!}{19.0cm}{%
+\begin{tikzpicture}[x=1cm,y=1cm,font=\small,
+  fio/.style={line width=0.9pt,color=fiov,line cap=round},
+  sym/.style={draw=simb,fill=ci,line width=0.8pt},
+  pf/.style={font=\codfont\fontsize{7}{8}\selectfont,inner sep=1pt},
+  pn/.style={text=black!60},
+  pu/.style={text=black,font=\codfont\fontsize{7}{8}\selectfont\bfseries},
+  pnum/.style={font=\fontsize{5}{6}\selectfont,text=simb,inner sep=0.5pt}]
+
+  % grade da folha
+  \foreach \xp in {0.5,1.0,...,27.5}{\draw[blue!8,very thin] (\xp,0.5) -- (\xp,18.7);}
+  \foreach \yp in {0.5,1.0,...,18.5}{\draw[blue!8,very thin] (0.5,\yp) -- (27.4,\yp);}
+  % moldura com coordenadas
+  \draw[thick] (0,0) rectangle (27.9,19.2);
+  \draw[thick] (0.5,0.5) rectangle (27.4,18.7);
+  \foreach \c in {1,...,6}{
+    \pgfmathsetmacro{\xc}{0.5+(\c-0.5)*26.9/6}
+    \node[font=\tiny] at (\xc,0.25) {\c}; \node[font=\tiny] at (\xc,18.95) {\c};}
+  \foreach \l/\yc in {D/3.0,C/7.5,B/12.0,A/16.5}{
+    \node[font=\tiny] at (0.25,\yc) {\l}; \node[font=\tiny] at (27.65,\yc) {\l};}
+  \foreach \c in {1,...,5}{
+    \pgfmathsetmacro{\xt}{0.5+\c*26.9/6}
+    \draw (\xt,0) -- (\xt,0.5); \draw (\xt,18.7) -- (\xt,19.2);}
+  \foreach \yt in {5.25,9.75,14.25}{\draw (0,\yt) -- (0.5,\yt); \draw (27.4,\yt) -- (27.9,\yt);}
+
+  % título, separador e legenda
+  \node[anchor=west,font=\large\bfseries] at (0.8,18.3) {Esquemático modular: N01 (gateway + máquina 1) e N02 (sensor remoto, máquina 2)};
+  \draw[gray!60,dash pattern=on 4pt off 3pt] (13.75,2.2) -- (13.75,17.6);
+
+  \modulo{0.6}{R3}{U1}{S1}{R1}{R2}{J1}{MÓDULO N01}{notebook:\\energia e serial}
+  \modulo{13.9}{R6}{U2}{S2}{R4}{R5}{J2}{MÓDULO N02}{fonte 5 V:\\só energia}
+
+  % ESP-NOW entre as antenas
+  \draw[dash pattern=on 5pt off 3pt,line width=1.4pt,color=azul,-{Stealth[length=2.6mm]}]
+    (23.8,16.35) -- (23.8,17.55) -- (10.5,17.55) -- (10.5,16.45);
+  \node[font=\scriptsize\bfseries,text=azul,anchor=south] at (17.15,17.6) {ESP-NOW: rádio 2,4 GHz, canal 11 (N02 envia o estado ao N01)};
+
+  % legenda
+  \node[anchor=north west,font=\fontsize{7}{9}\selectfont,text width=15.5cm,align=left] at (0.8,2.15)
+    {\textbf{Legenda.} Fios verdes = ligações; \textbf{+5V} e \textbf{GND} se ligam pelo nome. Códigos dos pinos da placa: \textbf{L1 a L10} = lado esquerdo (de cima para baixo), \textbf{R1 a R10} = lado direito, \textbf{M1 a M5} = meio da placa. Referências: U = placa, S = sensor (conector de 4 pinos), J = USB-C da placa (VBUS = pino 5V), R = resistor de 1 k$\Omega$ (R2 + R3 e R5 + R6 em série formam os 2 k$\Omega$ do divisor).\\
+     \textbf{ECHO:} 5 V no sensor e 3,3 V no GPIO1 (divisor de 1 k$\Omega$ + 2 k$\Omega$).};
+
+  % carimbo
+  \draw[thick,fill=white] (17.0,0.5) rectangle (27.4,2.3);
+  \draw (17.0,1.4) -- (27.4,1.4); \draw (22.2,0.5) -- (22.2,1.4);
+  \node[anchor=west,font=\scriptsize\bfseries] at (17.15,1.85) {Projeto Ocupação de Máquinas de Academia (TI0148, UFC)};
+  \node[anchor=west,font=\tiny] at (17.15,0.95) {Folha 1/4: esquemático modular};
+  \node[anchor=west,font=\tiny] at (22.35,0.95) {Data: 26/11/2026 \quad Rev. 2};
+\end{tikzpicture}}
+\end{center}
+
+\newpage
+% =============================== PÁGINA 2 ===============================
+\begin{center}
+\resizebox{!}{19.0cm}{%
+\begin{tikzpicture}[x=1cm,y=1cm,font=\small,
+  fio/.style={line width=2.2pt,line cap=round,line join=round},
+  nota/.style={font=\scriptsize,text=cinza,align=left,inner sep=1pt},
+  pf/.style={font=\codfont\fontsize{6.5}{7}\selectfont,inner sep=1pt}]
+
+  \node[anchor=south west,font=\large\bfseries] at (0,20.0) {Vista da protoboard (módulo N01 ou N02): onde entra cada fio e cada resistor};
+
+  % ---------- protoboard ----------
+  \draw[rounded corners=6pt,fill=gray!8,draw=gray!60,thick] (1.0,0.3) rectangle (23.3,10.8);
+  \fill[gray!22] (1.4,5.05) rectangle (22.9,5.75);
+  \fill[laranja!32] (4.32,6.0) rectangle (5.08,10.2);
+  \fill[laranja!16] (8.82,6.0) rectangle (9.58,10.2);
+  \fill[cinza!28]   (12.42,6.0) rectangle (13.18,10.2);
+  \fill[black!18]   (16.02,6.0) rectangle (16.78,10.2);
+  \foreach \c in {1,...,24}{
+    \node[font=\tiny,text=gray!80] at ({2.0+(\c-1)*0.9},10.5) {\c};
+    \foreach \y in {9.9,9.0,8.1,7.2,6.3,4.5,3.6,2.7,1.8,0.9}{
+      \fill[gray!55] ({2.0+(\c-1)*0.9},\y) circle (0.12);}}
+  \foreach \l/\y in {a/9.9,b/9.0,c/8.1,d/7.2,e/6.3,f/4.5,g/3.6,h/2.7,i/1.8,j/0.9}{
+    \node[font=\scriptsize\bfseries,text=gray!80] at (1.5,\y) {\l};}
+  \node[font=\scriptsize\bfseries,text=laranja] at (4.7,5.4)  {ECHO 5 V};
+  \node[font=\scriptsize\bfseries,text=laranja] at (9.2,5.4)  {ECHO 3,3 V};
+  \node[font=\scriptsize\bfseries,text=cinza]   at (12.8,5.4) {meio R2/R3};
+  \node[font=\scriptsize\bfseries]              at (16.4,5.4) {GND};
+
+  % ---------- resistores ----------
+  \foreach \xa/\xb/\yy/\nm in {4.7/9.2/8.1/R1, 9.2/12.8/7.2/R2, 12.8/16.4/6.3/R3}{
+    \pgfmathsetmacro{\xm}{(\xa+\xb)/2}
+    \draw[line width=1.4pt,gray!70] (\xa,\yy) -- (\xb,\yy);
+    \fill[corpo,draw=black!70,rounded corners=2pt] ({\xm-0.8},{\yy-0.22}) rectangle ({\xm+0.8},{\yy+0.22});
+    \draw[black!70,rounded corners=2pt] ({\xm-0.8},{\yy-0.22}) rectangle ({\xm+0.8},{\yy+0.22});
+    \fill[marrom] ({\xm-0.55},{\yy-0.22}) rectangle ({\xm-0.43},{\yy+0.22});
+    \fill[black]  ({\xm-0.30},{\yy-0.22}) rectangle ({\xm-0.18},{\yy+0.22});
+    \fill[vermelho] ({\xm-0.05},{\yy-0.22}) rectangle ({\xm+0.07},{\yy+0.22});
+    \fill[ouro]   ({\xm+0.45},{\yy-0.22}) rectangle ({\xm+0.57},{\yy+0.22});
+    \node[font=\scriptsize\bfseries,anchor=south] at (\xm,{\yy+0.3}) {\nm\ 1 k$\Omega$};
+    \fill[black!70] (\xa,\yy) circle (0.16); \fill[black!70] (\xb,\yy) circle (0.16);}
+  \node[nota,anchor=north] at (6.95,7.78) {marrom, preto, vermelho, dourado};
+
+  % ---------- sensor HC-SR04 (esquerda) ----------
+  \draw[thick,rounded corners=4pt,fill=laranja!10,draw=laranja] (1.5,15.0) rectangle (8.0,18.6);
+  \node[font=\bfseries\small] at (4.75,18.15) {S1 / S2 $\cdot$ HC-SR04 (sensor)};
+  \draw[thick,fill=white] (3.6,16.7) circle (0.6);  \node[font=\bfseries] at (3.6,16.7) {T};
+  \draw[thick,fill=white] (5.9,16.7) circle (0.6);  \node[font=\bfseries] at (5.9,16.7) {R};
+  \node[nota] at (4.75,15.8) {sensor visto de frente, pinos para baixo};
+  \foreach \xx/\nm/\cc in {2.6/VCC/vermelho,4.0/TRIG/azul,5.4/ECHO/laranja,6.8/GND/black}{
+    \fill[\cc] (\xx,15.0) circle (0.17);
+    \node[anchor=south,font=\codfont\scriptsize\bfseries,text=\cc] at (\xx,15.18) {\nm};}
+
+  % ---------- placa ESP32-C6 SuperMini (direita, USB para cima) ----------
+  \draw[thick,rounded corners=5pt,fill=cinza!8,draw=cinza] (20.2,11.7) rectangle (25.6,18.4);
+  \draw[thick,fill=cinza!30,draw=cinza] (22.0,18.4) rectangle (23.8,19.0);
+  \node[font=\scriptsize\bfseries] at (22.9,18.7) {USB-C};
+  \node[font=\scriptsize,text=cinza,rotate=90] at (22.9,15.2) {ESP32-C6 SuperMini (U1 / U2)};
+  \foreach \i/\nm/\cc in {0/{TX}/black,1/{RX}/black,2/{GPIO0}/azul,3/{GPIO1}/laranja,4/{GPIO2}/black,
+      5/{GPIO3}/black,6/{GPIO4}/black,7/{GPIO5}/black,8/{GPIO6}/black,9/{GPIO7}/black}{
+    \pgfmathsetmacro{\yy}{18.1-0.55*\i}
+    \ifnum\i=2\fill[azul] (20.2,\yy) circle (0.12);\else\ifnum\i=3\fill[laranja] (20.2,\yy) circle (0.12);\else\fill[gray] (20.2,\yy) circle (0.09);\fi\fi
+    \node[pf,anchor=west,text=\cc!70] at (20.4,\yy) {\nm};}
+  \foreach \i/\nm/\cc in {0/{5V}/vermelho,1/{GND}/black,2/{3V3}/black,3/{GPIO20}/black,4/{GPIO19}/black,
+      5/{GPIO18}/black,6/{GPIO15}/black,7/{GPIO14}/black,8/{GPIO9}/black,9/{GPIO8}/black}{
+    \pgfmathsetmacro{\yy}{18.1-0.55*\i}
+    \ifnum\i=0\fill[vermelho] (25.6,\yy) circle (0.12);\else\ifnum\i=1\fill[black] (25.6,\yy) circle (0.12);\else\fill[gray] (25.6,\yy) circle (0.09);\fi\fi
+    \node[pf,anchor=east,text=\cc!70] at (25.4,\yy) {\nm};}
+  \foreach \j/\nm in {0/21,1/22,2/12,3/13,4/23}{
+    \pgfmathsetmacro{\xx}{21.4+0.65*\j}
+    \fill[gray] (\xx,12.55) circle (0.09);
+    \node[pf,text=black!60,anchor=north] at (\xx,12.4) {\nm};}
+  \node[nota,anchor=north] at (22.9,12.0) {meio da placa};
+
+  % ---------- jumpers ----------
+  \draw[fio,vermelho] (25.6,18.1) -- (26.6,18.1) -- (26.6,19.6) -- (1.0,19.6) -- (1.0,14.5) -- (2.6,14.5) -- (2.6,15.0);
+  \draw[fio,azul]     (20.2,17.0) -- (19.2,17.0) -- (19.2,14.0) -- (4.0,14.0) -- (4.0,15.0);
+  \draw[fio,black]    (6.8,15.0) -- (6.8,13.4) -- (15.95,13.4) -- (15.95,9.0) -- (16.4,9.0);
+  \draw[fio,laranja]  (20.2,16.45) -- (19.6,16.45) -- (19.6,12.8) -- (9.2,12.8) -- (9.2,9.9);
+  \draw[fio,laranja]  (5.4,15.0) -- (5.4,12.3) -- (4.7,12.3) -- (4.7,9.9);
+  \draw[fio,black]    (25.6,17.55) -- (26.1,17.55) -- (26.1,11.2) -- (16.4,11.2) -- (16.4,9.9);
+  \foreach \xx/\yy/\cc in {16.4/9.0/black,9.2/9.9/laranja,4.7/9.9/laranja,16.4/9.9/black}{
+    \fill[\cc] (\xx,\yy) circle (0.2); \draw[white,thick] (\xx,\yy) circle (0.2);}
+
+  % ---------- ordem de montagem ----------
+  \foreach \xx/\yy/\n in {5.45/8.6/1, 9.75/7.7/2, 13.3/6.8/3, 21.0/11.2/4, 11.6/13.4/5, 5.4/13.1/6, 14.0/12.8/7, 13.0/19.6/8, 11.0/14.0/9}{
+    \node[circle,fill=azul,text=white,inner sep=1.2pt,font=\scriptsize\bfseries] at (\xx,\yy) {\n};}
+
+  \node[nota,anchor=north west,text width=26.5cm] at (1.0,0.15)
+    {Números em azul = ordem de montagem (tabela da próxima página). Os jumpers vermelho e azul (8 e 9) ligam a placa direto ao sensor, sem passar pela protoboard: o 5V sai do lado \textbf{direito} da placa e o GPIO0, do \textbf{esquerdo}.
+     Em cada coluna, os furos \textbf{a} a \textbf{e} estão ligados entre si (tira); \textbf{f} a \textbf{j} são outra tira, separada pela cava central. Trilhos de alimentação (+ e $-$) não são usados.};
+\end{tikzpicture}}
+\end{center}
+
+\newpage
+% =============================== PÁGINA 3 ===============================
+{\large\bfseries Ordem de montagem, lista de redes e testes}\par\medskip
+\renewcommand{\arraystretch}{1.5}
+\begin{minipage}[t]{15.2cm}
+{\bfseries A. Ordem de montagem (placa \textbf{sem} USB)}\par\smallskip
+\begin{tabular}{|L{0.7cm}|L{3.9cm}|L{2.3cm}|L{2.4cm}|L{3.4cm}|}
+\hline
+\textbf{\#} & \textbf{O que ligar} & \textbf{De} & \textbf{Para} & \textbf{Confira} \\ \hline
+1 & Resistor R1 (1 k$\Omega$) & \cod{4c} & \cod{9c} & \\ \hline
+2 & Resistor R2 (1 k$\Omega$) & \cod{9d} & \cod{13d} & \\ \hline
+3 & Resistor R3 (1 k$\Omega$) & \cod{13e} & \cod{17e} & testes T1 e T2 \\ \hline
+4 & Jumper GND da placa (lado direito, R2) & pino \cod{GND} & \cod{17a} & \\ \hline
+5 & Jumper GND do sensor & pino \cod{GND} & \cod{17b} & teste T3 \\ \hline
+6 & Jumper ECHO do sensor & pino \cod{ECHO} & \cod{4a} & \\ \hline
+7 & Jumper GPIO1 da placa (lado esquerdo, L4) & pino \cod{GPIO1} & \cod{9a} & \\ \hline
+8 & Jumper direto 5V (lado direito, R1) & \cod{5V} da placa & \cod{VCC} do sensor & sem protoboard \\ \hline
+9 & Jumper direto TRIG (lado esquerdo, L3) & \cod{GPIO0} da placa & \cod{TRIG} do sensor & sem protoboard \\ \hline
+10 & Ligar o USB (por último) & fonte ou notebook & conector USB-C & teste T4 \\ \hline
+\end{tabular}
+\end{minipage}\hfill
+\begin{minipage}[t]{11.6cm}
+{\bfseries B. Lista de redes (netlist)}\par\smallskip
+\begin{tabular}{|L{2.0cm}|L{1.4cm}|L{1.5cm}|L{4.3cm}|}
+\hline
+\textbf{Rede} & \textbf{Placa} & \textbf{Sensor} & \textbf{Protoboard} \\ \hline
+5V (VBUS) & \cod{5V} & \cod{VCC} & jumper direto \\ \hline
+GND & \cod{GND} & \cod{GND} & \cod{17a}, \cod{17b}, R3 (\cod{17e}) \\ \hline
+TRIG & \cod{GPIO0} & \cod{TRIG} & jumper direto \\ \hline
+ECHO 5 V & --- & \cod{ECHO} & \cod{4a}, R1 (\cod{4c}) \\ \hline
+ECHO 3,3 V & \cod{GPIO1} & --- & \cod{9a}, R1 (\cod{9c}), R2 (\cod{9d}) \\ \hline
+Meio R2/R3 & --- & --- & R2 (\cod{13d}), R3 (\cod{13e}) \\ \hline
+\end{tabular}
+\end{minipage}
+
+\bigskip
+\begin{minipage}[t]{15.2cm}
+{\bfseries C. Testes com o multímetro}\par\smallskip
+\begin{tabular}{|L{0.9cm}|L{3.0cm}|L{3.8cm}|L{4.4cm}|}
+\hline
+\textbf{Teste} & \textbf{Quando} & \textbf{Medir} & \textbf{Esperado} \\ \hline
+T1 & depois do passo 3, \textbf{antes} dos jumpers & resistência entre \cod{9a} e \cod{17a} & cerca de \textbf{2 k$\Omega$} (R2 + R3) \\ \hline
+T2 & idem & resistência entre \cod{4a} e \cod{17a} & cerca de \textbf{3 k$\Omega$} (R1 + R2 + R3) \\ \hline
+T3 & depois do passo 5 & continuidade entre \cod{17a} e \cod{17b} & \textbf{bipe} (0 $\Omega$) \\ \hline
+T4 & USB ligado & tensão entre \cod{VCC} e \cod{GND} do sensor & \textbf{4,8 a 5,2 V} \\ \hline
+\end{tabular}
+\end{minipage}\hfill
+\begin{minipage}[t]{11.6cm}
+{\bfseries D. Erros comuns}\par\smallskip
+\begin{itemize}\setlength{\itemsep}{3pt}\setlength{\topsep}{1pt}\setlength{\leftmargin}{1.2em}
+  \item Os dois terminais de um resistor na \textbf{mesma coluna} (a a e): curto, o resistor não faz nada.
+  \item Resistor entre colunas erradas: confira 4 a 9, 9 a 13 e 13 a 17.
+  \item \textbf{ECHO direto no GPIO1}, sem o R1: 5 V no pino de 3,3 V. Confira o teste T1 antes do USB.
+  \item TRIG e ECHO trocados: o sensor nunca responde (\cod{dist=-1}).
+  \item Furos \textbf{a--e} e \textbf{f--j} são tiras separadas pela cava central.
+\end{itemize}
+\end{minipage}
+
+\bigskip
+\noindent\fbox{\parbox{26.9cm}{\vspace{3pt}\textbf{Checklist antes de ligar o USB:}\quad
+\fbox{\rule{0pt}{1.4ex}\hspace{1.4ex}} R1, R2 e R3 nas colunas certas (4 a 9, 9 a 13, 13 a 17) \quad \fbox{\rule{0pt}{1.4ex}\hspace{1.4ex}} testes T1, T2 e T3 conferidos \quad
+\fbox{\rule{0pt}{1.4ex}\hspace{1.4ex}} nenhum fio de ECHO direto no GPIO1 \quad \fbox{\rule{0pt}{1.4ex}\hspace{1.4ex}} 5V e GND não trocados\vspace{3pt}}}
+
+\bigskip
+{\footnotesize\color{cinza} Projeto Ocupação de Máquinas de Academia (TI0148, UFC). Repita a montagem nas duas placas (N01 e N02).\par}
+
+\newpage
+% =============================== PÁGINA 4 ===============================
+\begin{center}
+\resizebox{!}{19.0cm}{%
+\begin{tikzpicture}[x=1cm,y=1cm,font=\small,
+  tag/.style={draw,rounded corners=2pt,minimum width=3.2cm,minimum height=0.62cm,inner sep=2pt,font=\codfont\scriptsize\bfseries},
+  livre/.style={fill=gray!15}, evitar/.style={fill=vermelho!22},
+  uazul/.style={fill=azul,text=white}, ularanja/.style={fill=laranja,text=white},
+  uverm/.style={fill=vermelho,text=white}, upreto/.style={fill=black,text=white},
+  nota/.style={font=\footnotesize,text=black,align=left,inner sep=1pt}]
+
+  \node[anchor=south west,font=\large\bfseries] at (0,18.4) {Pinout da ESP32-C6 SuperMini (USB-C para cima)};
+
+  \draw[thick,rounded corners=6pt,fill=cinza!8,draw=cinza] (4.0,0.8) rectangle (9.0,13.4);
+  \draw[thick,fill=cinza!30,draw=cinza] (5.8,13.4) rectangle (7.2,14.2);
+  \node[font=\scriptsize\bfseries] at (6.5,13.8) {USB-C};
+  \node[font=\scriptsize\bfseries,text=cinza] at (6.5,14.55) {USB para cima};
+
+  \foreach \i/\n/\c in {0/{TX (GPIO16)}/livre,1/{RX (GPIO17)}/livre,
+      2/{GPIO0}/uazul,3/{GPIO1}/ularanja,4/{GPIO2}/livre,5/{GPIO3}/livre,
+      6/{GPIO4 (boot, JTAG)}/evitar,7/{GPIO5 (boot, JTAG)}/evitar,
+      8/{GPIO6}/livre,9/{GPIO7}/livre}{
+    \pgfmathsetmacro{\yy}{12.6-0.9*\i}
+    \fill[cinza] (4.0,\yy) circle (0.11);
+    \node[tag,anchor=east,\c] at (3.8,\yy) {\n};}
+  \node[anchor=east,font=\footnotesize\bfseries,text=cinza] at (3.8,13.55) {LADO ESQUERDO (L1 a L10)};
+
+  \foreach \i/\n/\c in {0/{5V}/uverm,1/{GND}/upreto,
+      2/{3V3 (livre)}/livre,3/{GPIO20}/livre,4/{GPIO19}/livre,5/{GPIO18}/livre,
+      6/{GPIO15 (boot)}/evitar,7/{GPIO14}/livre,
+      8/{GPIO9 (botão BOOT)}/evitar,9/{GPIO8 (LED RGB)}/evitar}{
+    \pgfmathsetmacro{\yy}{12.6-0.9*\i}
+    \fill[cinza] (9.0,\yy) circle (0.11);
+    \node[tag,anchor=west,\c] at (9.2,\yy) {\n};}
+  \node[anchor=west,font=\footnotesize\bfseries,text=cinza] at (9.2,13.55) {LADO DIREITO (R1 a R10)};
+
+  \foreach \j/\n/\c in {0/{21}/livre,1/{22}/livre,2/{12}/evitar,3/{13}/evitar,4/{23}/livre}{
+    \pgfmathsetmacro{\xx}{4.75+0.85*\j}
+    \fill[cinza] (\xx,2.2) circle (0.11);
+    \node[tag,minimum width=0.7cm,\c] at (\xx,1.55) {\n};}
+  \node[font=\scriptsize,text=cinza] at (6.5,2.75) {meio da placa (M1 a M5)};
+  \node[font=\tiny,text=cinza] at (6.5,1.0) {12 e 13 = USB};
+
+  \node[tag,fill=azul,text=white,minimum width=0.9cm,anchor=west] at (13.6,17.6) {};
+  \node[tag,fill=laranja,text=white,minimum width=0.9cm,anchor=west] at (14.6,17.6) {};
+  \node[tag,fill=vermelho,text=white,minimum width=0.9cm,anchor=west] at (15.6,17.6) {};
+  \node[tag,fill=black,text=white,minimum width=0.9cm,anchor=west] at (16.6,17.6) {};
+  \node[nota,anchor=west] at (17.7,17.6) {usados neste projeto};
+  \node[tag,fill=vermelho!22,minimum width=0.9cm,anchor=west] at (13.6,16.8) {};
+  \node[nota,anchor=west] at (14.7,16.8) {evitar (boot, JTAG, LED, botão, USB)};
+  \node[tag,fill=gray!15,minimum width=0.9cm,anchor=west] at (13.6,16.0) {};
+  \node[nota,anchor=west] at (14.7,16.0) {livre, não usado};
+
+  \node[nota,anchor=north west,text width=13.4cm] at (13.6,15.2)
+    {\textbf{O que isso significa para a montagem}\\[3pt]
+     \textbullet\ \textbf{5V} (R1) e \textbf{GND} (R2) estão no \textbf{lado direito}; \textbf{GPIO0} (L3) e \textbf{GPIO1} (L4) estão no \textbf{lado esquerdo}. Os jumpers da placa atravessam de um lado ao outro: use fios compridos o bastante.\\[3pt]
+     \textbullet\ Lado esquerdo, de cima para baixo: TX, RX, 0, 1, 2, 3, 4, 5, 6, 7.\\[3pt]
+     \textbullet\ Lado direito, de cima para baixo: 5V, GND, 3V3, 20, 19, 18, 15, 14, 9, 8.\\[3pt]
+     \textbullet\ No meio da placa: 21, 22, 12, 13, 23.};
+
+  \node[nota,anchor=north west,text width=13.4cm,fill=azul!5,draw=azul,rounded corners=3pt,inner sep=5pt] at (13.6,8.4)
+    {\textbf{\color{azul}De onde vem esta ordem}\\[3pt]
+     É o layout da \textbf{sua placa}, informado por você olhando a serigrafia. Ele bate com o que as páginas consultadas dizem sobre as listas dos dois lados (Mischianti e ESPboards), que não esclarecem a direção da lista nem a posição exata do ``meio da placa''.\\[3pt]
+     A SuperMini não tem especificação oficial única e a serigrafia varia por fabricante: se comprar outra placa, confira de novo.};
+
+  \node[nota,anchor=north west,text width=13.4cm] at (13.6,3.6)
+    {\textbf{Pinos a evitar:} GPIO4 e GPIO5 (boot e JTAG), GPIO8 (boot e LED RGB), GPIO9 (boot e botão BOOT), GPIO12 e GPIO13 (USB) e GPIO15 (boot).};
+\end{tikzpicture}}
+\end{center}
+
+\end{document}

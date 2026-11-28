@@ -1,0 +1,351 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazilian]{babel}
+\usepackage[left=3cm,right=2cm,top=2.5cm,bottom=2cm]{geometry}
+\usepackage{mathptmx}
+\usepackage{setspace}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage{graphicx}
+\usepackage{titlesec}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{xcolor}
+\usepackage{listings}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta}
+
+\titleformat{\section}{\normalfont\large\bfseries}{\thesection}{1em}{\MakeUppercase}
+\titlespacing*{\section}{0pt}{12pt}{6pt}
+\titleformat{\subsection}{\normalfont\normalsize\bfseries}{\thesubsection}{1em}{}
+\titlespacing*{\subsection}{0pt}{8pt}{4pt}
+\setlist{itemsep=2pt,topsep=4pt}
+\setstretch{1.03}
+\emergencystretch=4em
+
+\newcommand{\cod}[1]{\texttt{\detokenize{#1}}}
+
+\lstset{
+  language=C,
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\bfseries,
+  commentstyle=\itshape\color{black!60},
+  frame=single,
+  framerule=0.3pt,
+  breaklines=true,
+  columns=fullflexible,
+  aboveskip=6pt,
+  belowskip=6pt,
+  xleftmargin=2pt,
+  xrightmargin=2pt
+}
+
+\begin{document}
+
+\begin{center}
+\includegraphics[height=1.8cm]{../assets/ufc_logo.png}\par
+\vspace{0.2cm}
+{\normalsize UNIVERSIDADE FEDERAL DO CEARÁ -- UFC\par}
+{\normalsize CENTRO DE TECNOLOGIA\par}
+{\normalsize CURSO DE ENGENHARIA DE COMPUTAÇÃO\par}
+\vspace{0.5cm}
+{\Large \textbf{PLANO DE FIRMWARE: FUNÇÕES E\\ DIVISÃO DE TAREFAS}\par}
+\vspace{0.2cm}
+{\large Sistema de ocupação de máquinas de academia -- nós ESP32-C6 com ESP-NOW\par}
+\vspace{0.4cm}
+{\small
+Antonio Marcos Justino Carneiro \quad João Victor Leandro Nunes \quad João Lucas Oliveira Mota\par
+Anderson Moura Costa do Nascimento \quad Álvaro Siqueira Galvão\par
+Disciplina de Sistemas Embarcados (TI0148) -- 2026.2 \quad Professor: Dário Queiroz\par
+Fortaleza, CE -- novembro de 2026 (versão de 20/11/2026)\par}
+\end{center}
+
+% =========================================================
+\section{Objetivo deste documento}
+% =========================================================
+
+Este documento explica \textbf{o que cada um precisa fazer} no firmware do protótipo até o marco \textbf{M1, na quinta-feira 26/11}: um nó real mede a distância, decide se a máquina está livre ou ocupada, envia o resultado e o servidor mostra o estado. Há duas frentes que andam em paralelo:
+
+\begin{itemize}
+  \item \textbf{Anderson (só PC):} a lógica do nó em C puro, que é o coração do sistema e \textbf{não depende de placa}. Vem com testes prontos, que começam falhando e passam quando a função estiver correta (Seção~\ref{sec:colega}).
+  \item \textbf{Marcos (com as placas):} rádio, saída serial, sensor e o programa principal, que rodam nas duas placas ESP32-C6 (Seção~\ref{sec:marcos}).
+\end{itemize}
+
+As decisões e dúvidas estão na Seção~\ref{sec:duvidas}.
+
+% =========================================================
+\section{Situação e restrições}
+% =========================================================
+
+\begin{itemize}
+  \item \textbf{Placas:} as duas ESP32-C6 SuperMini estão com o Marcos. O Anderson não tem placa.
+  \item \textbf{Repositório:} \cod{github.com/Jolusca/ocupacao-maquinas-academia} (público). O esqueleto do firmware está na branch \cod{firmware-base}; a \cod{main} não foi alterada.
+  \item \textbf{Protoboard, HC-SR04 e demais componentes:} ficam no laboratório, e o primeiro acesso da equipe é na \textbf{terça 24/11, às 14h}.
+  \item \textbf{Decisão vigente} (nota de 18/11): nós com ESP32-C6 SuperMini, comunicação por \textbf{ESP-NOW} no canal 11, sem roteador, e gateway ligado ao notebook por USB. O professor Dário já confirmou o uso do ESP32-C6 no lugar da Nucleo H533RE.
+  \item \textbf{Estratégia:} até a terça, tudo roda com uma \textbf{distância simulada} no lugar do sensor. Na terça entra só o driver do HC-SR04 e a calibração. Assim, a falta de componentes não atrasa o que dá para fazer agora.
+\end{itemize}
+
+\begin{center}
+\begin{tikzpicture}[
+  box/.style={draw,rounded corners=2pt,minimum height=1.0cm,minimum width=2.5cm,align=center,font=\footnotesize,thick},
+  arr/.style={-{Stealth[length=2.2mm]},thick},
+  lab/.style={font=\scriptsize,align=center}]
+  \node[box] (n2) {Nó 2\\(sensor, \texttt{N02})};
+  \node[box,right=2.3cm of n2] (n1) {Nó 1\\(gateway, \texttt{N01})};
+  \node[box,right=2.3cm of n1] (srv) {Servidor\\Python + fila};
+  \node[box,right=1.6cm of srv,minimum width=1.9cm] (web) {Página\\web};
+  \draw[arr] (n2) -- node[above,lab]{ESP-NOW\\canal 11} (n1);
+  \draw[arr] (n1) -- node[above,lab]{USB\\serial} (srv);
+  \draw[arr] (srv) -- (web);
+  \node[box,below=0.5cm of n2,minimum width=2.2cm,dashed] (s2) {HC-SR04};
+  \node[box,below=0.5cm of n1,minimum width=2.2cm,dashed] (s1) {HC-SR04};
+  \draw[thick] (n2) -- (s2);
+  \draw[thick] (n1) -- (s1);
+\end{tikzpicture}
+\end{center}
+
+% =========================================================
+\section{O que o nó precisa fazer}
+% =========================================================
+
+\subsection{Regras de decisão}
+
+\begin{itemize}
+  \item \textbf{Presença:} distância de \textbf{70 cm ou menos}. \textbf{Ausência:} distância de \textbf{90 cm ou mais}, ou leitura inválida (sem eco).
+  \item \textbf{Histerese:} entre 70 e 90 cm o nó \textbf{mantém a condição anterior}. Não zera nem reinicia o cronômetro.
+  \item \textbf{Livre para ocupada:} presença contínua por \textbf{mais de 5 s}. \textbf{Ocupada para livre:} ausência contínua por \textbf{mais de 90 s}.
+  \item Se a condição contrária se interrompe antes do tempo, o cronômetro \textbf{volta a zero}.
+  \item O estado inicial é \textbf{livre}.
+\end{itemize}
+
+\begin{longtable}{|L{3.0cm}|L{6.2cm}|L{5.3cm}|}
+\hline
+\textbf{Cenário} & \textbf{O que acontece} & \textbf{Resultado esperado} \\ \hline
+\endhead
+Passante & Máquina livre; alguém fica a 70 cm ou menos por menos de 5 s e vai embora. & Continua \textbf{livre}. \\ \hline
+Treino & Máquina livre; alguém fica a 70 cm ou menos por mais de 5 s. & Passa a \textbf{ocupada}. \\ \hline
+Descanso & Máquina ocupada; a pessoa se afasta (90 cm ou mais) por menos de 90 s. & Continua \textbf{ocupada}. \\ \hline
+Liberação & Máquina ocupada; ausência por mais de 90 s. & Passa a \textbf{livre}. \\ \hline
+\end{longtable}
+
+\subsection{Contrato do quadro (versão 1)}
+
+\begin{itemize}
+  \item \textbf{Formato:} \cod{N<id>,<estado>,<seq>}, por exemplo \cod{N02,1,17}. O \cod{id} vai de 1 a 99 e tem sempre 2 dígitos. Estado \cod{1} é ocupada e \cod{0} é livre. O \cod{seq} vai de 0 a 65535 e volta a 0 depois de 65535.
+  \item \textbf{Quando enviar:} a cada mudança de estado e a cada \textbf{15 s} como sinal de vida. Repetir o estado torna a perda de um pacote inofensiva.
+  \item \textbf{Serial do gateway:} uma linha por quadro, terminada em \texttt{\textbackslash n}. Linhas que começam com \texttt{\#}\, são log e o servidor \textbf{ignora}.
+\end{itemize}
+
+% =========================================================
+\section{Divisão de tarefas}
+% =========================================================
+
+\begin{longtable}{|L{4.0cm}|L{3.6cm}|L{1.5cm}|L{1.8cm}|L{2.0cm}|}
+\hline
+\textbf{Módulo} & \textbf{Arquivo} & \textbf{Placa?} & \textbf{Quem} & \textbf{Quando} \\ \hline
+\endhead
+Quadro (codificar e decodificar) & \cod{core/frame.c} & Não & Anderson & sex 20 \\ \hline
+Agendador de envio e \emph{seq} & \cod{core/scheduler.c} & Não & Anderson & sex 20 a sáb 21 \\ \hline
+Máquina de estados e filtro & \cod{core/occupancy.c} & Não & Anderson (Marcos revisa) & sáb 21 a dom 22 \\ \hline
+Rádio ESP-NOW & \cod{hal/radio.c} & Sim & Marcos & sex 20 a sáb 21 \\ \hline
+Saída serial e log & \cod{hal/serial_out.c} & Sim & Marcos & sex 20 \\ \hline
+Distância simulada & \cod{hal/dist_fake.c} & Sim & Marcos & sex 20 \\ \hline
+Driver do HC-SR04 & \cod{hal/hcsr04.c} & Sensor & Marcos & escreve sáb 21; testa ter 24 \\ \hline
+Programa principal e papéis & \cod{app/main.ino} & Sim & Marcos & sáb 21 a seg 23 \\ \hline
+\end{longtable}
+
+% =========================================================
+\section{Parte do Anderson: a lógica do nó em C puro}\label{sec:colega}
+% =========================================================
+
+\subsection{Como começar}
+
+\begin{enumerate}
+  \item Ter \cod{gcc} e \cod{make} instalados (no Windows, use o WSL ou o MSYS2).
+  \item Abrir a pasta \cod{firmware/} e rodar \cod{make test}. Tudo falha, de propósito: os arquivos de \cod{core/} são só \emph{stubs} com a marcação \cod{TODO}.
+  \item Implementar na ordem \textbf{quadro, agendador, máquina de estados}. A cada função, rodar \cod{make test} e ver as falhas diminuírem.
+  \item O trabalho está pronto quando aparecer \cod{TODOS OS TESTES PASSARAM}.
+\end{enumerate}
+
+\subsection{Como usar o git}\label{sec:git}
+
+O código fica no repositório compartilhado \cod{github.com/Jolusca/ocupacao-maquinas-academia}. O esqueleto, com os testes, está na branch \cod{firmware-base}. Trabalhe numa branch própria, criada a partir dela:
+
+\begin{lstlisting}[language={}]
+git fetch
+git checkout -b firmware-core origin/firmware-base
+cd firmware && make test
+# implemente um modulo e rode make test de novo
+git add firmware/core/frame.c
+git commit -m "core: implementa frame_encode e frame_decode"
+git push -u origin firmware-core
+\end{lstlisting}
+
+\begin{itemize}
+  \item \textbf{Um commit por módulo} (quadro, agendador, máquina de estados).
+  \item Você mexe só em \cod{firmware/core/}. O Marcos mexe em \cod{firmware/hal/} e \cod{firmware/app/}. Assim os dois não entram em conflito.
+  \item A \cod{main} fica intacta. Na segunda, quando os testes passarem, o Marcos junta a \cod{firmware-core} com o trabalho das placas.
+  \item A pasta \cod{build/} gerada pelo \cod{make} não vai para o repositório (já é ignorada pelo \cod{.gitignore}).
+\end{itemize}
+
+\subsection{Regras de ouro}
+
+\begin{itemize}
+  \item \textbf{C puro:} nada de \cod{Arduino.h}, \cod{esp_*.h}, \cod{millis()} ou \cod{malloc}. O \textbf{tempo entra como argumento} (\cod{now_ms}). Sem variáveis globais: o estado fica dentro das \emph{structs}.
+  \item O código tem de compilar com \cod{-Wall -Wextra -Wpedantic -Werror}, como no \cod{Makefile}.
+  \item \textbf{Não altere os testes} para fazê-los passar. Se achar um erro no teste ou uma regra ambígua, \textbf{pergunte no grupo}.
+  \item Commits pequenos, com mensagem clara.
+\end{itemize}
+
+\subsection{\texttt{core/frame.c}: o quadro de texto}
+
+\begin{lstlisting}
+typedef struct { uint8_t node; uint8_t state; uint16_t seq; } frame_t;
+int frame_encode(const frame_t *f, char *out, size_t out_size);
+int frame_decode(const char *line, frame_t *f);
+\end{lstlisting}
+
+\begin{itemize}
+  \item \cod{frame_encode} escreve \cod{N02,1,17} em \cod{out} (sem \texttt{\textbackslash n}) e devolve o tamanho do texto, ou \textbf{-1} se \cod{node} não está entre 1 e 99, se \cod{state} não é 0 ou 1, ou se \cod{out_size} não comporta o texto mais o \texttt{\textbackslash 0}.
+  \item \cod{frame_decode} lê uma linha, aceita \texttt{\textbackslash n} ou \texttt{\textbackslash r\textbackslash n} no final e devolve \cod{FRAME_OK} (0), \cod{FRAME_ERR_FORMAT} (-1) ou \cod{FRAME_ERR_RANGE} (-2). Em caso de erro, \textbf{não pode alterar} o \cod{frame_t}.
+  \item \textbf{Formato errado} (-1): não começa com \cod{N}, o \cod{id} não tem 2 dígitos, falta ou sobra campo, há espaço, sinal ou letra. \textbf{Valor fora da faixa} (-2): formato certo, mas \cod{id} 0, estado 2 ou \cod{seq} acima de 65535. Números muito grandes \textbf{não podem estourar}.
+  \item Os casos de teste estão em \cod{test/frames.txt}. Esse mesmo arquivo será usado pelo parser em Python do servidor.
+\end{itemize}
+
+\subsection{\texttt{core/scheduler.c}: quando enviar}
+
+\begin{lstlisting}
+void     sched_init(tx_sched_t *s);
+bool     sched_due(const tx_sched_t *s, uint32_t now_ms, bool state_changed);
+uint16_t sched_next_seq(tx_sched_t *s, uint32_t now_ms);
+\end{lstlisting}
+
+\begin{itemize}
+  \item \cod{sched_due} devolve \textbf{verdadeiro} se o estado mudou, se ainda não enviou nada, ou se passaram \textbf{15000 ms ou mais} desde o último envio.
+  \item \cod{sched_next_seq} registra o envio (guarda \cod{now_ms}) e devolve o \emph{seq} a usar: 0, 1, 2, \ldots, 65535, 0, \ldots
+  \item O relógio de 32 bits pode \textbf{dar a volta}. Use subtração sem sinal (\cod{now_ms - last_tx_ms}) e o teste cobre esse caso.
+\end{itemize}
+
+\subsection{\texttt{core/occupancy.c}: a máquina de estados}
+
+\begin{lstlisting}
+void        occ_init(occ_t *o, const occ_cfg_t *cfg);
+bool        occ_update(occ_t *o, uint32_t now_ms, int16_t dist_cm);
+occ_state_t occ_state(const occ_t *o);
+void        filter_init(filter_t *f);
+int16_t     filter_median3(filter_t *f, int16_t sample);
+\end{lstlisting}
+
+\begin{itemize}
+  \item \cod{occ_update} é chamada a cada leitura (cerca de 100 ms) e devolve \textbf{verdadeiro somente na chamada em que o estado mudou}. \cod{dist_cm} negativo é leitura inválida e conta como \textbf{ausência}.
+  \item As regras são as da Seção 3: 70 e 90 cm, histerese na zona morta, mais de 5 s para ocupar e mais de 90 s para liberar, cronômetro zerado quando a condição se interrompe.
+  \item O teste usa a comparação \textbf{estrita}: com 5000 ms exatos ainda é livre. Os limites contam assim: \textbf{70 cm é presença} e \textbf{90 cm é ausência}.
+  \item \cod{filter_median3} devolve a \textbf{mediana das 3 últimas leituras}, o que remove um pico isolado. Com menos de 3 leituras devolve a última.
+  \item Os campos de \cod{occ_t} em \cod{occupancy.h} são sugestão: pode mudá-los, desde que a API e os testes continuem valendo.
+\end{itemize}
+
+\subsection{Critério de pronto e entrega}
+
+\begin{itemize}
+  \item \cod{make test} termina com \cod{TODOS OS TESTES PASSARAM} nos três módulos.
+  \item Os arquivos de \cod{core/} não incluem nenhum cabeçalho de hardware.
+  \item \textbf{Entregar por git} (Seção~\ref{sec:git}): um commit por módulo e \cod{git push} na branch \cod{firmware-core}. Depois avisar o Marcos, que integra na \textbf{segunda 23/11}.
+  \item \textbf{Se terminar cedo:} escrever o parser do quadro em Python usando os mesmos vetores de \cod{test/frames.txt}, e ajudar no servidor.
+\end{itemize}
+
+% =========================================================
+\section{Parte do Marcos: hardware, rádio e integração}\label{sec:marcos}
+% =========================================================
+
+\subsection{Antes da terça (com distância simulada)}
+
+\begin{itemize}
+  \item \textbf{Rádio ESP-NOW} (\cod{hal/radio.c}): o nó 2 envia \cod{N02,<estado>,<seq>} ao gateway por \textbf{unicast}, no canal 11, com até 3 tentativas. Meta: perda de 0\% a 1\% nas distâncias de bancada, como nos ensaios de 17 e 18/11.
+  \item \textbf{Saída serial} (\cod{hal/serial_out.c}): o gateway escreve uma linha por quadro e logs com \texttt{\#}\,. \textbf{Testado em 20/11:} o Python abre a porta sem reiniciar a placa desde que \textbf{não desligue DTR nem RTS}, e a placa não bloqueia quando ninguém lê a USB (\cod{Serial.setTxTimeoutMs(0)}).
+  \item \textbf{Distância simulada} (\cod{hal/dist_fake.c}): roteiro com passante, treino, descanso e liberação, com relógio acelerável. Permite rodar o sistema inteiro sem o sensor.
+  \item \textbf{Driver do HC-SR04} (\cod{hal/hcsr04.c}): escrito sem o sensor, seguindo a interface de \cod{hal/hcsr04.h}: pulso de 10 \textmu s, eco por captura nas duas bordas, tempo limite de 30 ms e pelo menos 60 ms entre leituras.
+  \item \textbf{Programa principal} (\cod{app/main.ino}): escolhe o papel pelo MAC (gateway ou sensor remoto), lê a distância a cada \textasciitilde{}100 ms, aplica o filtro e a máquina de estados, e envia quando o agendador mandar. O repositório já tem um \cod{firmware/main.cpp} vazio: decidir (D10) se o programa fica nele ou em \cod{app/}.
+  \item \textbf{Teste de longa duração:} cerca de 30 min com o sinal de vida, contando perdas.
+\end{itemize}
+
+\begin{longtable}{|L{4.4cm}|L{4.4cm}|L{4.8cm}|}
+\hline
+\textbf{Placa} & \textbf{Papel} & \textbf{MAC (decisão de 18/11)} \\ \hline
+\endhead
+Nó 1 & Gateway, \cod{N01}, recebe e repassa à serial & \cod{10:51:db:1c:51:80} \\ \hline
+Nó 2 & Sensor remoto, \cod{N02}, envia por ESP-NOW & \cod{10:51:db:1c:61:64} \\ \hline
+\end{longtable}
+
+\subsection{Fluxo do programa principal}
+
+\begin{enumerate}
+  \item A cada \textasciitilde{}100 ms: ler a distância, aplicar \cod{filter_median3} e chamar \cod{occ_update}.
+  \item Se \cod{sched_due(...)} for verdadeiro: montar o quadro com \cod{frame_encode} usando o \cod{seq} de \cod{sched_next_seq}.
+  \item \textbf{Sensor remoto:} \cod{radio_send}. \textbf{Gateway:} \cod{serial_emit_frame}.
+  \item No gateway, o \emph{callback} do rádio valida com \cod{frame_decode} e repassa à serial. Quadro inválido é descartado e registrado com \cod{log_line}.
+\end{enumerate}
+
+\subsection{Na terça 24/11 (laboratório)}
+
+\begin{itemize}
+  \item Ligar o HC-SR04 na protoboard com \textbf{divisor de tensão no Echo} (5 V para 3,3 V) e alimentar o sensor pelo pino de 5 V da placa.
+  \item Escolher os pinos de TRIG e ECHO \textbf{fora de} \cod{GPIO8}, \cod{GPIO9} e \cod{GPIO15} (pinos de boot do C6).
+  \item Validar o driver com régua ou osciloscópio e \textbf{calibrar} os limiares de 70 e 90 cm, os tempos de 5 s e 90 s e o intervalo do sinal de vida.
+  \item Repetir a varredura de canais no local da bancada.
+\end{itemize}
+
+% =========================================================
+\section{Cronograma}
+% =========================================================
+
+\begin{longtable}{|L{2.5cm}|L{6.2cm}|L{5.7cm}|}
+\hline
+\textbf{Dia} & \textbf{Marcos (com as placas)} & \textbf{Anderson (só PC)} \\ \hline
+\endhead
+\textbf{Sex 20/11} (sem aula) & Esqueleto, configuração, rádio, serial e distância simulada: o quadro vai do sensor remoto ao gateway. & Quadro (\cod{frame}) e agendador (\cod{scheduler}). \\ \hline
+\textbf{Sáb 21 a dom 22} & Sinal de vida e perdas, teste de 30 min, driver do HC-SR04 escrito, serial sem reiniciar. & Máquina de estados (\cod{occupancy}) com os 4 cenários e os casos de borda. \\ \hline
+\textbf{Seg 23/11} & Integra o \cod{core/}, roda os 4 cenários com a distância simulada e o servidor por cima. & Revisão cruzada e correções. \\ \hline
+\textbf{Ter 24/11} (lab, 14h) & HC-SR04 com divisor e calibração. & Servidor e página com quadros reais. \\ \hline
+\textbf{Qua 25/11} & 2º nó montado e ensaio, se os componentes puderem sair do laboratório; senão, ajustes sem hardware. & Ajustes. \\ \hline
+\textbf{Qui 26/11} (M1) & \multicolumn{2}{L{12.3cm}|}{\textbf{Demonstração:} um nó real mede, decide, envia e o servidor mostra o estado da máquina.} \\ \hline
+\end{longtable}
+
+% =========================================================
+\section{Decisões e dúvidas}\label{sec:duvidas}
+% =========================================================
+
+As decisões abaixo afetam as duas frentes. A coluna da recomendação é a sugestão do plano, não uma regra já aprovada. \textbf{D2, D3, D5 e D6} são combinados entre os dois; o \textbf{D10} é decisão do Marcos; \textbf{D1, D4, D7 e D9} vão para o grupo geral; o \textbf{D8} já está decidido.
+
+\begin{longtable}{|L{0.8cm}|L{4.6cm}|L{5.9cm}|L{2.2cm}|}
+\hline
+\textbf{\#} & \textbf{Pergunta} & \textbf{Recomendação} & \textbf{Quem decide} \\ \hline
+\endhead
+D1 & O gateway também mede uma máquina? & \textbf{Sim}: gateway \cod{N01} (quadro local) e sensor remoto \cod{N02}. Assim as 2 placas monitoram 2 máquinas. Se não, o protótipo cobre só 1. & Grupo \\ \hline
+D2 & Leitura inválida do HC-SR04 (sem eco, acima de \textasciitilde{}4 m) conta como o quê? & \textbf{Ausência} (longe). & Grupo \\ \hline
+D3 & Zona entre 70 e 90 cm. & \textbf{Mantém a condição anterior} (histerese). & Grupo \\ \hline
+D4 & Quando o servidor marca um nó como \emph{offline}? & \textbf{60 s} sem quadro (4 sinais de vida perdidos). Nos ensaios a 10 m um quadro se perdeu (30 s sem notícia) e dois seguidos chegariam a 45 s. O servidor também deve \textbf{aceitar quadro com \emph{seq} repetido}. & Quem faz o servidor \\ \hline
+D5 & Formato do quadro no ar. & \textbf{Texto ASCII igual ao da serial} (\cod{N02,1,17}), como no contrato do Trello. & Grupo \\ \hline
+D6 & Como cada placa sabe seu papel? & Pela tabela de MAC no \cod{config.h}. & Marcos \\ \hline
+D7 & Qual porta serial o servidor abre para ler o gateway? & O gateway usa a porta USB nativa (\cod{/dev/ttyACM*}); combinar com quem faz o servidor. & Quem faz o servidor \\ \hline
+D8 & Como o Anderson entrega o código? & \textbf{Decidido:} git, na branch \cod{firmware-core} criada a partir da \cod{firmware-base}, com um commit por módulo. & Decidido \\ \hline
+D9 & Os componentes podem sair do laboratório depois da terça? & Os HC-SR04 serão levados por um colega e o restante (protoboard, resistores, jumpers, fonte) já está no laboratório. Se nada puder sair, o sensor só é testado nas aulas. & Grupo \\ \hline
+D10 & O programa principal da placa fica em \cod{app/main.ino} (\cod{arduino-cli}) ou no \cod{main.cpp} vazio que já existe (PlatformIO)? & \cod{app/main.ino} com o \cod{arduino-cli}, que já compilou para o C6. O PlatformIO com o C6 não foi testado. & Marcos \\ \hline
+\end{longtable}
+
+% =========================================================
+\section{Riscos}
+% =========================================================
+
+\begin{itemize}
+  \item \textbf{Acesso ao laboratório:} os componentes ficam lá. Se não puderem sair, o sensor só é testado nas aulas (terça e quinta, 14h), o que aperta a calibração antes do M1. Por isso o resto roda antes, com a distância simulada.
+  \item \textbf{Porta serial nativa do C6 (resolvido em 20/11):} desligar DTR e RTS ao abrir a porta reinicia a placa. O servidor deve abrir a porta \textbf{sem mexer nos dois}.
+  \item \textbf{Eco do HC-SR04 em 5 V:} precisa de divisor de tensão para não danificar o pino de 3,3 V.
+  \item \textbf{Alimentação:} um carregador ruim já derrubou um nó nos ensaios (a placa parava de responder). Usar fonte e cabo bons.
+  \item \textbf{Alcance:} antena cerâmica, cerca de 10 m com paredes nos ensaios de 18/11. Medir no lugar real da bancada.
+  \item \textbf{README do repositório desatualizado:} o \cod{README.MD} principal ainda fala em BLE e em STM32. Reescrever para ESP32-C6 e ESP-NOW, agora que o professor confirmou o uso do ESP32-C6.
+\end{itemize}
+
+\end{document}

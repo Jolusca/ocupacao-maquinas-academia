@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" font-family="'Noto Sans', 'DejaVu Sans', sans-serif">
+  <defs>
+    <marker id="seta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#1f2933"/>
+    </marker>
+  </defs>
+
+  <rect width="1600" height="900" fill="#ffffff"/>
+
+  <!-- Título -->
+  <text x="65" y="62" font-size="32" font-weight="700" fill="#1f2933">Ocupação de Máquinas de Academia: arquitetura da entrega</text>
+  <text x="65" y="94" font-size="18" fill="#52606d">TI0148 Sistemas Embarcados · proposta de 25/11/2026 (a confirmar no grupo) · as setas mostram o caminho do dado</text>
+
+  <!-- Contêiner do notebook -->
+  <rect x="445" y="128" width="710" height="326" rx="16" fill="#f7f9fb" stroke="#9aa5b1" stroke-width="2" stroke-dasharray="8 6"/>
+  <text x="465" y="156" font-size="16" font-weight="700" fill="#52606d">NOTEBOOK (laboratório ou casa)</text>
+
+  <!-- ===== Linha 1 ===== -->
+  <!-- 1. Nó sensor -->
+  <rect x="65" y="180" width="270" height="250" rx="14" fill="#fdf1de" stroke="#b26a00" stroke-width="2.5"/>
+  <text x="85" y="214" font-size="22" font-weight="700" fill="#1f2933">Nó sensor (N02)</text>
+  <text x="85" y="238" font-size="15" fill="#52606d">ESP32-C6 + HC-SR04</text>
+  <text x="85" y="272" font-size="15" fill="#1f2933">• mede a distância do usuário</text>
+  <text x="85" y="294" font-size="15" fill="#1f2933">• histerese 70/90 cm</text>
+  <text x="85" y="316" font-size="15" fill="#1f2933">• envia ao mudar de estado</text>
+  <text x="85" y="338" font-size="15" fill="#1f2933">  e a cada 15 s (sinal de vida)</text>
+  <rect x="85" y="372" width="230" height="40" rx="20" fill="#ffffff" stroke="#b26a00" stroke-width="2"/>
+  <text x="200" y="397" font-size="14" font-weight="700" fill="#8a5200" text-anchor="middle">FALTA: HC-SR04 real (qui 26/11)</text>
+
+  <!-- 2. Gateway -->
+  <rect x="465" y="180" width="270" height="250" rx="14" fill="#e6f4ee" stroke="#1b7f5c" stroke-width="2.5"/>
+  <text x="485" y="214" font-size="22" font-weight="700" fill="#1f2933">Gateway (N01)</text>
+  <text x="485" y="238" font-size="15" fill="#52606d">ESP32-C6 no USB do notebook</text>
+  <text x="485" y="272" font-size="15" fill="#1f2933">• recebe por ESP-NOW</text>
+  <text x="485" y="294" font-size="15" fill="#1f2933">• imprime os quadros na serial</text>
+  <text x="485" y="316" font-size="15" fill="#1f2933">• não guarda estado</text>
+  <rect x="485" y="372" width="230" height="40" rx="20" fill="#ffffff" stroke="#1b7f5c" stroke-width="2"/>
+  <text x="600" y="397" font-size="14" font-weight="700" fill="#145c43" text-anchor="middle">TESTADO nas 2 placas</text>
+
+  <!-- 3. Ponte -->
+  <rect x="865" y="180" width="270" height="250" rx="14" fill="#fdf1de" stroke="#b26a00" stroke-width="2.5"/>
+  <text x="885" y="214" font-size="22" font-weight="700" fill="#1f2933">Ponte (Python)</text>
+  <text x="885" y="238" font-size="15" fill="#52606d">server/bridge.py</text>
+  <text x="885" y="272" font-size="15" fill="#1f2933">• valida o quadro (parse_frame)</text>
+  <text x="885" y="294" font-size="15" fill="#1f2933">• ignora seq repetido</text>
+  <text x="885" y="316" font-size="15" fill="#1f2933">• offline após 60 s sem quadro</text>
+  <text x="885" y="338" font-size="15" fill="#1f2933">• grava em nodes e telemetry</text>
+  <rect x="885" y="372" width="230" height="40" rx="20" fill="#ffffff" stroke="#b26a00" stroke-width="2"/>
+  <text x="1000" y="397" font-size="14" font-weight="700" fill="#8a5200" text-anchor="middle">TESTADA com banco simulado</text>
+
+  <!-- 4. MongoDB -->
+  <rect x="1265" y="180" width="270" height="250" rx="14" fill="#fdf1de" stroke="#b26a00" stroke-width="2.5"/>
+  <text x="1285" y="214" font-size="22" font-weight="700" fill="#1f2933">MongoDB Atlas</text>
+  <text x="1285" y="238" font-size="15" fill="#52606d">banco gym_occupancy</text>
+  <text x="1285" y="272" font-size="15" fill="#1f2933">• nodes: estado atual,</text>
+  <text x="1285" y="294" font-size="15" fill="#1f2933">  last_seen, online</text>
+  <text x="1285" y="316" font-size="15" fill="#1f2933">• telemetry: 1 linha por</text>
+  <text x="1285" y="338" font-size="15" fill="#1f2933">  mudança de estado</text>
+  <rect x="1285" y="372" width="230" height="40" rx="20" fill="#ffffff" stroke="#b26a00" stroke-width="2"/>
+  <text x="1400" y="397" font-size="14" font-weight="700" fill="#8a5200" text-anchor="middle">NO AR; formato novo em ajuste</text>
+
+  <!-- Setas da linha 1 -->
+  <line x1="338" y1="305" x2="462" y2="305" stroke="#1f2933" stroke-width="3"/>
+  <text x="400" y="278" font-size="14" font-weight="700" fill="#1f2933" text-anchor="middle">ESP-NOW</text>
+  <text x="400" y="296" font-size="13" fill="#52606d" text-anchor="middle">rádio 2,4 GHz</text>
+  <text x="400" y="334" font-size="13" fill="#52606d" text-anchor="middle">canal 11</text>
+
+  <line x1="738" y1="305" x2="862" y2="305" stroke="#1f2933" stroke-width="3"/>
+  <text x="800" y="278" font-size="14" font-weight="700" fill="#1f2933" text-anchor="middle">USB serial</text>
+  <text x="800" y="334" font-size="13" fill="#52606d" text-anchor="middle">N02,1,17</text>
+
+  <line x1="1138" y1="305" x2="1262" y2="305" stroke="#1f2933" stroke-width="3"/>
+  <text x="1200" y="278" font-size="14" font-weight="700" fill="#1f2933" text-anchor="middle">grava</text>
+  <text x="1200" y="334" font-size="13" fill="#52606d" text-anchor="middle">usuário só</text>
+  <text x="1200" y="352" font-size="13" fill="#52606d" text-anchor="middle">de escrita</text>
+
+  <!-- ===== Linha 2 ===== -->
+  <!-- API -->
+  <rect x="1265" y="540" width="270" height="200" rx="14" fill="#f1f3f5" stroke="#5b6470" stroke-width="2.5" stroke-dasharray="10 6"/>
+  <text x="1285" y="574" font-size="22" font-weight="700" fill="#1f2933">API (só leitura)</text>
+  <text x="1285" y="598" font-size="15" fill="#52606d">ainda não existe</text>
+  <text x="1285" y="630" font-size="15" fill="#1f2933">• GET /machines</text>
+  <text x="1285" y="652" font-size="15" fill="#1f2933">• GET /machines/&lt;id&gt;/history</text>
+  <rect x="1285" y="684" width="230" height="40" rx="20" fill="#ffffff" stroke="#5b6470" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="1400" y="709" font-size="14" font-weight="700" fill="#3e4752" text-anchor="middle">A FAZER: quem e onde?</text>
+
+  <!-- Página web -->
+  <rect x="865" y="540" width="270" height="200" rx="14" fill="#f1f3f5" stroke="#5b6470" stroke-width="2.5" stroke-dasharray="10 6"/>
+  <text x="885" y="574" font-size="22" font-weight="700" fill="#1f2933">Página web</text>
+  <text x="885" y="598" font-size="15" fill="#52606d">front simples</text>
+  <text x="885" y="630" font-size="15" fill="#1f2933">• máquinas livres/ocupadas</text>
+  <text x="885" y="652" font-size="15" fill="#1f2933">• offline, ordenação, estatística</text>
+  <rect x="885" y="684" width="230" height="40" rx="20" fill="#ffffff" stroke="#5b6470" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="1000" y="709" font-size="14" font-weight="700" fill="#3e4752" text-anchor="middle">EM DESENVOLVIMENTO</text>
+
+  <!-- Setas da linha 2 -->
+  <line x1="1400" y1="433" x2="1400" y2="537" stroke="#1f2933" stroke-width="3"/>
+  <text x="1416" y="478" font-size="14" font-weight="700" fill="#1f2933">lê</text>
+  <text x="1416" y="498" font-size="13" fill="#52606d">usuário só de leitura</text>
+
+  <line x1="1262" y1="640" x2="1138" y2="640" stroke="#1f2933" stroke-width="3"/>
+  <text x="1200" y="612" font-size="14" font-weight="700" fill="#1f2933" text-anchor="middle">HTTP / JSON</text>
+
+  <!-- Legenda -->
+  <rect x="65" y="540" width="670" height="200" rx="14" fill="#ffffff" stroke="#cbd2d9" stroke-width="2"/>
+  <text x="85" y="574" font-size="18" font-weight="700" fill="#1f2933">Legenda</text>
+  <rect x="85" y="590" width="26" height="18" rx="4" fill="#e6f4ee" stroke="#1b7f5c" stroke-width="2"/>
+  <text x="124" y="605" font-size="15" fill="#1f2933">pronto e testado</text>
+  <rect x="285" y="590" width="26" height="18" rx="4" fill="#fdf1de" stroke="#b26a00" stroke-width="2"/>
+  <text x="324" y="605" font-size="15" fill="#1f2933">falta testar com hardware ou banco reais</text>
+  <rect x="85" y="620" width="26" height="18" rx="4" fill="#f1f3f5" stroke="#5b6470" stroke-width="2" stroke-dasharray="5 3"/>
+  <text x="124" y="635" font-size="15" fill="#1f2933">ainda não existe ou está em desenvolvimento</text>
+
+  <text x="85" y="676" font-size="15" font-weight="700" fill="#1f2933">Quadro: N&lt;id&gt;,&lt;estado&gt;,&lt;seq&gt;</text>
+  <text x="85" y="698" font-size="15" fill="#1f2933">estado 1 = ocupada, 0 = livre · seq cresce a cada envio (volta após 65535)</text>
+  <text x="85" y="720" font-size="15" fill="#1f2933">Regras do nó: histerese 70/90 cm, confirmação em 5 s (ocupar) e 90 s (liberar)</text>
+
+  <!-- Rodapé -->
+  <text x="65" y="796" font-size="17" font-weight="700" fill="#1f2933">Nenhuma placa fala com o banco.</text>
+  <text x="65" y="822" font-size="16" fill="#3e4752">Só a ponte grava no Mongo. A chave fica no .env do notebook (fora do git), num usuário do Atlas só de escrita em nodes e telemetry.</text>
+  <text x="65" y="848" font-size="16" fill="#3e4752">O IP do notebook precisa estar liberado no Atlas (Network Access). Escopo da disciplina: 2 nós, servidor e página simples; o resto fica para a bolsa.</text>
+
+  <!-- Pontas das setas -->
+  <polygon points="462,305 446,297 446,313" fill="#1f2933"/>
+  <polygon points="862,305 846,297 846,313" fill="#1f2933"/>
+  <polygon points="1262,305 1246,297 1246,313" fill="#1f2933"/>
+  <polygon points="1400,537 1392,521 1408,521" fill="#1f2933"/>
+  <polygon points="1138,640 1154,632 1154,648" fill="#1f2933"/>
+</svg>

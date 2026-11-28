@@ -1,0 +1,313 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazilian]{babel}
+\usepackage[left=3cm,right=2cm,top=2.5cm,bottom=2cm]{geometry}
+\usepackage{mathptmx}
+\usepackage{setspace}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage{graphicx}
+\usepackage{titlesec}
+\usepackage{array}
+\usepackage{longtable}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta}
+
+\titleformat{\section}{\normalfont\large\bfseries}{\thesection}{1em}{\MakeUppercase}
+\titlespacing*{\section}{0pt}{12pt}{6pt}
+\setlist{itemsep=2pt,topsep=4pt}
+\setstretch{1.08}
+
+\begin{document}
+
+\begin{center}
+\includegraphics[height=1.8cm]{../assets/ufc_logo.png}\par
+\vspace{0.2cm}
+{\normalsize UNIVERSIDADE FEDERAL DO CEARÁ -- UFC\par}
+{\normalsize CENTRO DE TECNOLOGIA\par}
+{\normalsize CURSO DE ENGENHARIA DE COMPUTAÇÃO\par}
+\vspace{0.5cm}
+{\Large \textbf{SISTEMA DE OCUPAÇÃO E RECOMENDAÇÃO DE\\ EQUIPAMENTOS DE ACADEMIA COM STM32}\par}
+\vspace{0.2cm}
+{\large Proposta de projeto -- protótipo de baixo custo\par}
+\vspace{0.4cm}
+{\small
+Antonio Marcos Justino Carneiro \quad João Victor Leandro Nunes \quad João Lucas Oliveira Mota\par
+Anderson Moura Costa do Nascimento \quad Álvaro Siqueira Galvão\par
+Disciplina de Sistemas Embarcados (TI0148) -- 2026.2 \quad Professor: Dário Queiroz\par
+Fortaleza, CE -- outubro de 2026\par}
+\end{center}
+
+% =========================================================
+\section{Introdução e motivação}
+% =========================================================
+
+Em academias cheias, o praticante perde tempo procurando qual equipamento da
+sua rotina de treino está livre, e a espera desorganizada gera filas e
+interrupções no treino. Propõe-se um sistema em que nós sem fio, fixados nos
+equipamentos e baseados em STM32, detectam a ocupação de cada máquina. Um
+servidor em um computador de mesa recebe os dados e alimenta um site que
+indica ao frequentador a próxima máquina disponível da sua rotina. Os mesmos
+dados dão à academia, que é o cliente do sistema, a estimativa de uso dos
+equipamentos, o ranking das máquinas mais e menos usadas e a base para a
+manutenção preventiva. Como a equipe é formada por estudantes, o protótipo foi
+dimensionado para o \textbf{menor custo viável}, e a versão de produto fica como
+evolução.
+
+% =========================================================
+\section{Objetivos}
+% =========================================================
+
+\textbf{Objetivo geral.} Projetar e construir um protótipo de baixo custo, com
+STM32 nos nós, que detecta a ocupação de equipamentos de academia, recomenda
+ao frequentador a próxima máquina livre da sua rotina de treino e fornece à
+academia dados de uso e frequência para a gestão e a manutenção preventiva.
+
+\noindent\textbf{Objetivos específicos.}
+\begin{itemize}
+  \item Detectar presença com sensor de distância lido pelo STM32, com
+        histerese e temporizadores para reduzir falsos positivos;
+  \item enviar o estado de cada nó por BLE a um servidor em um PC de mesa;
+  \item manter no servidor o estado de todas as máquinas (livre, ocupada ou
+        \emph{offline}), as estatísticas de uso e a recomendação;
+  \item publicar um site com o painel das máquinas e a próxima máquina da
+        rotina do frequentador;
+  \item gerar, com os dados medidos, estimativas de uso e frequência por
+        equipamento (mais e menos usados, horários de pico) e alertas de
+        manutenção preventiva para a academia;
+  \item demonstrar a escala de 100 equipamentos com um emulador de nós.
+\end{itemize}
+
+% =========================================================
+\section{Arquitetura e escopo}
+% =========================================================
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[font=\small, >=Stealth,
+  box/.style={draw, rectangle, rounded corners=2pt, align=center, minimum height=0.9cm}]
+\node[box] (n1) {Nó 1};
+\node[box, below=0.2cm of n1] (n2) {Nó 2};
+\node[box, below=0.2cm of n2] (n3) {Nó 3};
+\node[box, right=2.2cm of n2, minimum height=3.4cm] (srv) {Servidor (PC de mesa)\\receptor BLE, regras,\\estatísticas, recomendação};
+\node[box, right=1.6cm of srv, minimum height=1.9cm] (web) {Site\\painel e próxima\\máquina};
+\draw[->] (n1.east) -- (srv.west |- n1.east);
+\draw[->] (n2.east) -- node[above,font=\scriptsize]{BLE} (srv.west |- n2.east);
+\draw[->] (n3.east) -- (srv.west |- n3.east);
+\draw[->] (srv.east) -- node[above,font=\scriptsize]{HTTP} (web.west);
+\end{tikzpicture}
+\caption{Arquitetura do protótipo (2 a 3 nós reais e emulador de até 100).}
+\end{figure}
+
+O STM32 fica \textbf{apenas nos nós}. O servidor roda em um computador comum,
+e o site é uma página web servida por ele.
+
+\begin{longtable}{|L{3.2cm}|L{5.6cm}|L{5.6cm}|}
+\hline
+ & \textbf{Protótipo (esta proposta)} & \textbf{Produto (evolução)} \\ \hline
+Nó & Placa Blue Pill (STM32F103C8) com módulo BLE serial e sensor ultrassônico, alimentada por USB & STM32WB com ToF, a bateria e sem fios \\ \hline
+Comunicação & Servidor conecta-se por BLE aos 2 ou 3 nós & \emph{BLE advertising} sem conexão, para 100 nós \\ \hline
+Escala de 100 & Emulador de nós & Nós reais \\ \hline
+Detecção & Distância (ultrassom) & Distância (ToF) e, na Fase 2, câmeras com visão computacional \\ \hline
+\end{longtable}
+
+% =========================================================
+\section{Premissas do protótipo}
+% =========================================================
+
+O protótipo será desenvolvido e demonstrado em um \textbf{ambiente e em
+situações ideais}, o que delimita o que se pretende provar nesta fase:
+\begin{itemize}
+  \item cada sensor é instalado na posição correta, apontado para o local de uso
+        do equipamento, sem obstruções;
+  \item a cobertura do rádio BLE é adequada entre os nós e o servidor;
+  \item os frequentadores seguem o comportamento esperado: usam o equipamento
+        pelo tempo normal, descansam entre as séries por períodos curtos e não
+        permanecem parados diante do sensor sem usar a máquina;
+  \item quem apenas passa pelo corredor é tratado pelo filtro de presença
+        (Seção~\ref{sec:dev}), sem tentar cobrir todos os casos de uma academia
+        real.
+\end{itemize}
+A validação em uma academia real, com ruído e comportamentos imprevistos, fica
+como etapa seguinte (piloto).
+
+% =========================================================
+\section{Componentes e orçamento do protótipo}
+% =========================================================
+
+Valores em reais, estimativas dos autores (sem pesquisa de preços atual).
+Cenário de três nós.
+
+\begin{longtable}{|L{6.4cm}|c|L{2.6cm}|L{2.4cm}|}
+\hline
+\textbf{Item} & \textbf{Qtd.} & \textbf{Unitário} & \textbf{Subtotal} \\ \hline
+Placa Blue Pill (STM32F103C8T6) & 3 & 35 a 60 & 105 a 180 \\ \hline
+Módulo BLE serial (tipo HM-10 ou JDY-23) & 3 & 30 a 55 & 90 a 165 \\ \hline
+Sensor ultrassônico HC-SR04 & 3 & 10 a 15 & 30 a 45 \\ \hline
+Protoboard pequena e jumpers & 3 & 15 a 30 & 45 a 90 \\ \hline
+Alimentação USB (cabo e carregador ou \emph{power bank}) & 3 & 0 a 25 & 0 a 75 \\ \hline
+Gravador ST-Link V2 (clone), compartilhado & 1 & 40 a 70 & 40 a 70 \\ \hline
+Adaptador BLE USB, se o PC não tiver Bluetooth & 1 & 0 a 40 & 0 a 40 \\ \hline
+Resistores e extras & -- & -- & 5 \\ \hline
+\textbf{Total (3 nós)} & & & \textbf{315 a 670} \\ \hline
+\end{longtable}
+
+Com dois nós, o total fica entre R\$ 225 e R\$ 485. Dividido entre os cinco
+integrantes, o cenário de três nós custa de R\$ 63 a R\$ 134 por pessoa. Há
+ainda um \textbf{plano B de custo zero}: nós simulados no Renode ou no Wokwi, com
+o mesmo servidor e site. O PC de mesa e o site usam o computador que a equipe já
+possui.
+
+% =========================================================
+\section{Desenvolvimento previsto}\label{sec:dev}
+% =========================================================
+
+\begin{itemize}
+  \item \textbf{Firmware do nó (STM32F103):} um temporizador dispara a medição
+        do HC-SR04 (pulso de trigger e medição do eco por interrupção nas duas bordas e contador livre, o que é portátil entre simuladores), com histerese
+        (chegada a $\leq$ 70~cm e saída a $\geq$ 90~cm) e dois filtros: a
+        presença deve durar cerca de 5~s para ocupar (ignora quem passa) e a
+        ausência deve durar 90~s para liberar (cobre o descanso entre séries).
+        O nó envia pela UART, ao módulo BLE, um quadro curto com ID, estado e
+        número de sequência (por exemplo, \texttt{N02,1,17}), repetido como
+        sinal de vida a cada 15~s. Entre as medições, a CPU fica em modo
+        \emph{Sleep}.
+  \item \textbf{Servidor (Python):} conecta-se aos nós por BLE (por exemplo, com
+        a biblioteca \emph{bleak}), decodifica os quadros, mantém o estado de cada
+        máquina, marca como \emph{offline} o nó sem sinal de vida, acumula
+        tempo e número de usos para estimar a espera e expõe uma API.
+  \item \textbf{Recomendação:} dada a rotina do frequentador, devolve a primeira
+        máquina livre. Se não houver nenhuma, devolve a que deve liberar
+        primeiro.
+  \item \textbf{Gestão e manutenção preventiva:} com o tempo e a frequência de
+        uso acumulados por equipamento, o servidor estima o uso de cada máquina,
+        ordena as mais e as menos usadas, identifica os horários de pico e
+        emite alerta de manutenção quando o uso acumulado atinge um limite
+        configurável (horas ou número de usos).
+  \item \textbf{Site:} app do frequentador (rotina e próxima máquina) e painel
+        da gestão (ocupação, uso e frequência por máquina e alertas), com
+        atualização em tempo real.
+  \item \textbf{Emulador:} script que gera eventos de até 100 nós, com perdas de
+        quadros e nós mortos, para testar a escala.
+  \item \textbf{Ambiente de simulação:} por recomendação do professor, o
+        \textbf{Altium Designer} (licença de estudante) é usado para o
+        esquemático do nó e para a simulação do circuito (divisor de tensão do
+        eco do HC-SR04 e alimentação), com o eco imitado por uma fonte de pulso.
+        Segundo a pesquisa da equipe, o Altium não executa firmware de
+        microcontrolador. O \textbf{firmware} é simulado no \textbf{Renode}
+        (principal) e no \textbf{Wokwi} (alternativa visual):
+        \begin{itemize}
+          \item \textbf{Renode:} código aberto, roda em Linux, Windows e Mac. Tem a
+                plataforma STM32F103 Blue Pill, com UART, GPIO, timers, I\textsuperscript{2}C
+                e EXTI (sem ADC e SPI, que o nó não usa). A UART do nó é exposta
+                por um socket TCP, lido pelo servidor ou por um script Python.
+          \item \textbf{Wokwi:} simula a Blue Pill com o STM32F103C8, o mesmo chip da
+                placa real, e traz o HC-SR04 pronto (largura do eco proporcional
+                à distância, ajustável de 2 a 400~cm). Permite automatizar testes
+                por cenários. Não implementa DMA nem RTC, e o ADC é parcial.
+          \item Em ambos, o módulo BLE é substituído por serial ou socket, e o
+                rádio só é validado nos nós reais. Um teste de viabilidade na
+                primeira semana confirma o simulador escolhido (medição do eco,
+                HC-SR04 e ponte com o servidor). O Proteus (F103C6, só Windows)
+                fica como opção, se houver Windows ou se o professor o exigir.
+        \end{itemize}
+\end{itemize}
+
+% =========================================================
+\section{Testes e resultados esperados}
+% =========================================================
+
+\begin{center}
+\begin{tabular}{|L{7.6cm}|L{7.2cm}|}
+\hline
+\textbf{Cenário} & \textbf{Resultado esperado} \\ \hline
+Passante (menos de 5~s) & O equipamento continua livre \\ \hline
+Frequentador treina (mais de 5~s) & Passa a ocupado e o site atualiza \\ \hline
+Descanso entre séries (menos de 60~s) & Continua ocupado \\ \hline
+Aparelho liberado (mais de 90~s) & Volta a livre \\ \hline
+Nó sem sinal de vida & Marcado como \emph{offline} \\ \hline
+Todas as máquinas da rotina ocupadas & Indica a que deve liberar primeiro \\ \hline
+100 nós emulados & Painel e recomendação corretos \\ \hline
+Uso acumulado de um equipamento atinge o limite & Alerta de manutenção preventiva no painel da gestão \\ \hline
+Uso e frequência de vários equipamentos & Ranking de mais e menos usados e horários de pico corretos \\ \hline
+\end{tabular}
+\end{center}
+
+% =========================================================
+\section{Fase 2: evolução com investimento}
+% =========================================================
+
+Se o projeto receber investimento, o servidor e o site são mantidos e a entrada
+de dados evolui:
+\begin{itemize}
+  \item \textbf{Nó de produto:} STM32WB com sensor ToF, a bateria, usando
+        \emph{BLE advertising} para atender 100 nós sem conexões e sem fios.
+  \item \textbf{Processamento digital de imagens com ML:} câmeras no teto e
+        detecção de pessoas por região de cada máquina, com inferência na borda
+        em hardware com NPU (por exemplo, a família STM32N6) e sem guardar
+        imagens, por causa da LGPD. A câmera passa a ser mais uma fonte de
+        eventos de ocupação, e os nós ToF servem de validação.
+\end{itemize}
+A visão computacional não entra na Fase 1 porque exige hardware com câmera e
+NPU, que o simulador não cobre, além de dados reais da academia.
+
+% =========================================================
+\section{Limitações e riscos}
+% =========================================================
+
+\begin{itemize}
+  \item O ultrassom pode detectar quem passa perto. O filtro de 5~s reduz o
+        problema, mas não o elimina.
+  \item Conexões BLE do PC limitam a poucos nós reais. Para 100 nós seria
+        necessário o \emph{advertising} da versão de produto.
+  \item Módulos BLE baratos variam em qualidade e firmware. A equipe testará um
+        antes de comprar os demais.
+  \item O protótipo é alimentado por USB, então a autonomia de bateria da versão
+        de produto é apenas estimada.
+  \item Muitas placas Blue Pill usam clones do microcontrolador, o que pode
+        exigir ajustes de gravação.
+  \item A simulação não cobre o rádio BLE nem o eco real do HC-SR04, que são
+        imitados. O Altium não simula firmware, e o firmware roda no Renode ou
+        no Wokwi. Não foi verificado se o modelo de timer desses simuladores
+        suporta captura de entrada com a precisão do eco (por isso o eco é
+        medido por interrupção e contador livre), nem se versões recentes do
+        Altium simulam microcontroladores.
+  \item Os resultados valem para o ambiente ideal descrito nas premissas, e não
+        para uma academia real.
+\end{itemize}
+
+% =========================================================
+\section{Cronograma}
+% =========================================================
+
+\begin{center}
+\begin{tabular}{|c|L{12.6cm}|}
+\hline
+\textbf{Semana} & \textbf{Entrega} \\ \hline
+1 & Especificação, Blue Pill gravada pelo ST-Link, medição do HC-SR04, módulo BLE ligado à UART, licença do Altium e teste de viabilidade (Altium, Renode e Wokwi) \\ \hline
+2 & Nó: histerese, temporizadores, quadro serial e sinal de vida \\ \hline
+3 & Servidor: conexão BLE aos nós, decodificação, estados e \emph{offline} \\ \hline
+4 & Recomendação, estatísticas de uso e frequência, manutenção preventiva e API \\ \hline
+5 & Site (app do frequentador e painel da gestão) e emulador de 100 nós \\ \hline
+6 & Testes de ponta a ponta, vídeo e relatório \\ \hline
+\end{tabular}
+\end{center}
+
+% =========================================================
+\section{Considerações finais e pontos a confirmar}
+% =========================================================
+
+O protótipo cobre a cadeia completa (sensor, STM32, rádio, servidor e site) com
+um custo de poucas centenas de reais. Solicita-se a confirmação de três pontos:
+\begin{enumerate}
+  \item É aceito um protótipo com 2 ou 3 nós reais e um emulador para a escala de
+        100 equipamentos?
+  \item A Blue Pill (STM32F103C8) com módulo BLE externo é aceita como STM32 dos nós?
+  \item O Altium para o esquemático e a simulação do circuito do nó, com o
+        Renode e o Wokwi para o firmware, atende à recomendação de simulação?
+\end{enumerate}
+
+\end{document}

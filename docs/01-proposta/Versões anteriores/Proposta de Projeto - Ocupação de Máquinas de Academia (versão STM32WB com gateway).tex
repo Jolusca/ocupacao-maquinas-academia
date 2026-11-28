@@ -1,0 +1,367 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazilian]{babel}
+\usepackage[left=3cm,right=2cm,top=2.5cm,bottom=2cm]{geometry}
+\usepackage{mathptmx} % fonte Times New Roman
+\usepackage{setspace}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage{graphicx}
+\usepackage{titlesec}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{tabularx}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,shapes.geometric}
+
+\titleformat{\section}{\normalfont\large\bfseries}{\thesection}{1em}{\MakeUppercase}
+\titlespacing*{\section}{0pt}{12pt}{6pt}
+\setlist{itemsep=2pt,topsep=4pt}
+\setstretch{1.08}
+
+\begin{document}
+
+\begin{center}
+\includegraphics[height=1.8cm]{../../assets/ufc_logo.png}\par
+\vspace{0.2cm}
+{\normalsize UNIVERSIDADE FEDERAL DO CEARÁ -- UFC\par}
+{\normalsize CENTRO DE TECNOLOGIA\par}
+{\normalsize CURSO DE ENGENHARIA DE COMPUTAÇÃO\par}
+\vspace{0.5cm}
+{\Large \textbf{SISTEMA DISTRIBUÍDO DE OCUPAÇÃO E RECOMENDAÇÃO DE\\ EQUIPAMENTOS DE ACADEMIA COM STM32WB, TOF E BLE}\par}
+\vspace{0.2cm}
+{\large Proposta de projeto de Sistemas Embarcados\par}
+\vspace{0.4cm}
+{\small
+Antonio Marcos Justino Carneiro \quad João Victor Leandro Nunes \quad João Lucas Oliveira Mota\par
+Disciplina de Sistemas Embarcados (TI0148) -- 2026.2 \quad Professor: Dário Queiroz\par
+Fortaleza, CE -- outubro de 2026\par}
+\end{center}
+
+% =========================================================
+\section{Introdução e motivação}
+% =========================================================
+
+Em academias com alta densidade de usuários, o praticante perde tempo procurando quais
+equipamentos da sua rotina de treino estão livres. A espera desorganizada gera filas,
+dispersão e aumento do tempo total de permanência. Para solucionar esse problema, propõe-se
+um sistema embarcado distribuído capaz de monitorar em tempo real a ocupação de até 100
+equipamentos de musculação e orientar o aluno diretamente pelo celular sobre a próxima
+máquina livre da sua ficha.
+
+Diferente de abordagens centralizadas baseadas em dezenas de cabos analógicos pela
+academia --- inviáveis operacionalmente ---, este projeto adota uma arquitetura sem fio de
+baixo consumo energético. Cada equipamento recebe um nó autônomo e compacto alimentado a
+bateria, composto por um sensor óptico de distância \emph{Time-of-Flight} (ToF) e um
+microcontrolador da família STM32WB com rádio \emph{Bluetooth Low Energy} (BLE) integrado.
+Os nós comunicam mudanças de ocupação via \emph{BLE Advertising} sem conexão para um
+\emph{gateway} STM32 central dotado de conectividade Wi-Fi, que despacha os eventos via MQTT
+diretamente para um \emph{broker} na nuvem ou servidor local pela rede sem fio da academia.
+
+% =========================================================
+\section{Objetivos}
+% =========================================================
+
+\textbf{Objetivo geral.} Projetar, dimensionar e prototipar um sistema embarcado distribuído
+de ultra-baixo consumo com microcontroladores STM32WB e sensores ToF para detecção de
+ocupação de até 100 máquinas de academia e recomendação de treinos em tempo real.
+
+\noindent\textbf{Objetivos específicos.}
+\begin{itemize}
+  \item Desenvolver o firmware do nó sensor com leitura de distância via I²C, aplicando
+        filtros de histerese e temporização local para eliminar falsos positivos (como
+        passantes momentâneos) e acomodar intervalos de descanso entre séries;
+  \item implementar a comunicação sem conexão por \emph{BLE Advertising}
+        (\emph{Broadcaster/Observer}), eliminando o custo computacional e de rádio de manter
+        100 conexões ativas simultâneas;
+  \item projetar o gerenciamento energético do nó utilizando o modo \emph{Stop 2} do
+        STM32WB e amostragem adaptativa do sensor ToF, garantindo autonomia de bateria
+        superior a 8 meses;
+  \item desenvolver o \emph{gateway} STM32 dotado de conectividade Wi-Fi, responsável pela
+        escuta contínua de rádio BLE e conexão direta como cliente MQTT com o \emph{broker};
+  \item integrar o fluxo a um \emph{broker} MQTT e aplicativo web/mobile com algoritmo de
+        recomendação de equipamentos por ordem de treino e menor tempo estimado de espera.
+\end{itemize}
+
+% =========================================================
+\section{Arquitetura do sistema}
+% =========================================================
+
+A arquitetura adota uma topologia em três camadas claramente desacopladas: nós sensores
+autônomos, \emph{gateway} concentrador e camada de dados/aplicação.
+
+\begin{figure}[h!]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[
+  node distance=1.4cm,
+  box/.style={draw, rectangle, rounded corners=2pt, minimum height=1.1cm, minimum width=2.4cm, align=center, font=\small},
+  bus/.style={draw, dashed, thick},
+  >=Stealth
+]
+
+% Nodes
+\node[box, fill=gray!10] (node1) {\textbf{Nó Sensor 1}\\VL53L1X + STM32WB\\Bateria};
+\node[box, fill=gray!10, below=0.6cm of node1] (nodeN) {\textbf{Nó Sensor 100}\\VL53L1X + STM32WB\\Bateria};
+
+\node[box, fill=blue!10, right=2.0cm of node1, yshift=-0.85cm] (gw) {\textbf{STM32 Gateway}\\BLE GAP Observer\\Wi-Fi + Cliente MQTT};
+
+\node[box, fill=yellow!10, right=2.0cm of gw] (broker) {\textbf{Broker MQTT}\\(Mosquitto)\\\emph{Servidor / Nuvem}};
+
+\node[box, fill=green!10, right=1.8cm of broker] (app) {\textbf{Aplicativo do Aluno}\\Página Web / App\\(Recomendação)};
+
+% Lines
+\draw[->, thick] (node1.east) -- node[above, font=\scriptsize, align=center] {BLE Advertising\\(canais 37, 38, 39)} (gw.north west);
+\draw[->, thick] (nodeN.east) -- node[below, font=\scriptsize, align=center] {BLE Advertising\\(canais 37, 38, 39)} (gw.south west);
+
+\draw[<->, thick] (gw.east) -- node[above, font=\scriptsize, align=center] {Wi-Fi\\(MQTT direto)} (broker.west);
+
+\draw[<->, thick] (broker.east) -- node[above, font=\scriptsize] {WebSocket / MQTT} (app.west);
+
+\end{tikzpicture}%
+}
+\caption{Arquitetura distribuída do sistema de ocupação de equipamentos.}
+\label{fig:arquitetura}
+\end{figure}
+
+\subsection{Distinção entre Gateway e Broker}
+É importante enfatizar que o \textbf{gateway} e o \textbf{broker} desempenham papéis
+distintos na arquitetura:
+\begin{itemize}
+  \item \textbf{STM32 Gateway com Wi-Fi:} Atua como rádio concentrador e cliente de rede sem fio.
+        Opera no modo \emph{GAP Observer} escutando continuamente os anúncios BLE dos 100 nós, realiza
+        a decodificação dos pacotes e conecta-se diretamente à rede sem fio (Wi-Fi) da academia,
+        atuando como \textbf{cliente MQTT} autônomo que publica os eventos diretamente no \emph{broker}.
+  \item \textbf{Broker MQTT:} Servidor de mensageria (\emph{Eclipse Mosquitto}) hospedado em
+        computador da academia, Raspberry Pi ou em nuvem. É ele quem gerencia os tópicos,
+        armazena as mensagens retidas (\emph{Retain}) e repassa as atualizações instantâneas
+        aos aplicativos dos alunos conectados.
+\end{itemize}
+
+% =========================================================
+\section{Componentes e especificações físicas}
+% =========================================================
+
+\begin{longtable}{|L{4.8cm}|L{10.0cm}|}
+\hline
+\textbf{Elemento} & \textbf{Descrição e especificação técnica} \\ \hline
+\endhead
+\hline
+\endfoot
+\textbf{SoC do nó sensor} & STM32WB55 (ou STM32WB15), núcleo duplo ARM Cortex-M4 (64~MHz) e
+Cortex-M0+ dedicado ao subsistema de rádio BLE 5.0 (2,4~GHz). Modo \emph{Stop 2} com
+corrente em repouso de apenas $2{,}1\,\mu\text{A}$ e conversor DC-DC SMPS integrado. \\ \hline
+\textbf{Sensor ToF} & STMicroelectronics VL53L1X, emissor laser VCSEL de 940~nm e receptor
+SPAD. Mede distância real absoluta por tempo de voo (até 1,3~m em modo curto), independente
+de cor ou refletância das roupas dos alunos. Interface I²C com pino XSHUT para desligamento
+completo em repouso. \\ \hline
+\textbf{Alimentação do nó} & Duas pilhas AA alcalinas em série ($3{,}0\text{ V}$) ou uma
+bateria industrial Li-SOCl2 ER14505 ($3{,}6\text{ V}$, 2600~mAh). \\ \hline
+\textbf{Gateway concentrador} & Microcontrolador STM32 com conectividade Wi-Fi (ex.: STM32WB
+com coprocessador/módulo Wi-Fi dedicado ST67W ou kit STM32 IoT Discovery B-U585I-IOT02A com Wi-Fi/BLE),
+alimentado por fonte DC/USB 5~V, operando em varredura contínua de rádio e cliente MQTT direto. \\ \hline
+\textbf{Conectividade do Gateway} & Wi-Fi 802.11 b/g/n (ou Wi-Fi 6), conectando-se diretamente
+ao ponto de acesso (roteador Wi-Fi) da academia e publicando mensagens MQTT diretamente no broker
+(porta 1883 ou 8883 com TLS) sem intermediários. \\ \hline
+\textbf{Broker e Servidor} & Broker MQTT (Mosquitto) e serviço de aplicação rodando em
+Raspberry Pi local ou máquina em nuvem. \\ \hline
+\textbf{Interface do usuário} & Aplicativo web responsivo para consulta da rotina e indicação
+da próxima máquina em tempo real. \\ \hline
+\end{longtable}
+
+\subsection{Dimensões Físicas e Instalação na Máquina}
+O sensor mede apenas $4{,}9 \times 2{,}5 \times 1{,}56\text{ mm}$ e o encapsulamento QFN do
+STM32WB mede $7 \times 7\text{ mm}$. Assim, o volume total do nó é determinado pelas pilhas
+e pela caixa plástica de proteção:
+
+\begin{center}
+\small
+\begin{tabular}{lc}
+\toprule
+\textbf{Versão do nó} & \textbf{Dimensões aproximadas ($C \times L \times A$)} \\
+\midrule
+Placa de desenvolvimento NUCLEO-WB55RG & $70 \times 65 \times 15\text{ mm}$ \\
+Protótipo com placa de testes e pilhas & $\approx 100 \times 80 \times 35\text{ mm}$ \\
+Placa de circuito dedicado com ToF & $\approx 40 \times 30 \times 5\text{ mm}$ \\
+\textbf{Gabinete final com 2 pilhas AA} & $\mathbf{\approx 65 \times 40 \times 25\text{ mm}}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent\textbf{Critérios mecânicos e de radiofrequência para instalação:}
+\begin{enumerate}
+  \item \textbf{Janela óptica:} Gabinete em polímero com abertura frontal vedada por acrílico
+        óptico transparente ao infravermelho de 940~nm, apontada para a região anatômica do
+        aluno (banco ou encosto);
+  \item \textbf{Isolamento de RF e chassi metálico:} A antena cerâmica ou traço de PCB do
+        STM32WB deve ficar projetada para fora das chapas e tubos de aço da máquina, evitando
+        o efeito de blindagem eletromagnética (Gaiola de Faraday);
+  \item \textbf{Manutenção e robustez:} Fixação na estrutura fixa do equipamento por suporte
+        magnético ou fita industrial 3M VHB; tampa traseira aparafusada para troca de pilhas;
+        grau de proteção IP54 contra respingos de suor, poeira e produtos de limpeza química.
+\end{enumerate}
+
+% =========================================================
+\section{Protocolo de comunicação e rede}
+% =========================================================
+
+\subsection{Comunicação por BLE Advertising (Broadcaster / Observer)}
+A manutenção de 100 conexões BLE simultâneas sobrecarregaria o rádio e esgotaria as pilhas
+dos nós. Por isso, os nós operam como \textbf{Broadcasters} utilizando pacotes de anúncio
+não conectáveis (\emph{Non-Connectable Undirected Advertising} --- \texttt{ADV\_NONCONN\_IND})
+nos canais 37, 38 e 39.
+
+O payload útil utiliza o campo \emph{Manufacturer Specific Data} (AD Type \texttt{0xFF}),
+totalizando apenas 10 bytes:
+\begin{center}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{|c|c|c|c|c|c|c|}
+\hline
+\textbf{Tamanho (1B)} & \textbf{Tipo (1B)} & \textbf{Company ID (2B)} & \textbf{ID Máquina (1B)} & \textbf{Estado (1B)} & \textbf{SeqNum (1B)} & \textbf{Bateria (1B)} \\
+\hline
+\texttt{0x09} & \texttt{0xFF} & \texttt{0x0030} (ST) & $1\text{ a }100$ & $0=\text{L}, 1=\text{O}, 2=\text{D}$ & $0\text{ a }255$ & $0\text{ a }100\%$ \\
+\hline
+\end{tabular}%
+}
+\end{center}
+
+\subsection{Estrutura de Tópicos e Mensagens MQTT}
+Ao decodificar os pacotes BLE, o \emph{gateway} publica no \emph{broker} MQTT sob o tópico:
+\begin{center}
+\texttt{academia/aparelho/\{id\}/status}
+\end{center}
+com a flag \textbf{\texttt{Retain = true}} habilitada e QoS 1. O corpo da mensagem é em JSON:
+\begin{center}
+\small
+\texttt{\{"id": 37, "estado": "ocupado", "bateria": 92, "rssi": -65, "ts": 1728945600\}}
+\end{center}
+A flag \texttt{Retain} garante que, quando um aluno abre o aplicativo no smartphone, o
+\emph{broker} entrega imediatamente o mapa de ocupação completo das 100 máquinas, sem
+necessidade de aguardar a transmissão dos nós.
+
+% =========================================================
+\section{Gerenciamento de energia e cálculo de autonomia}
+% =========================================================
+
+O nó opera em regime de \emph{duty cycling}: a cada 1 segundo, o microcontrolador acorda do
+modo \emph{Stop 2}, liga o sensor ToF, executa uma medição de 20~ms e retorna ao repouso.
+Se houver mudança de estado confirmada, o rádio BLE é ativado para transmitir três rajadas
+de anúncio.
+
+\begin{itemize}
+  \item \textbf{Sensor VL53L1X ativo (20~ms a cada 1~s):}
+        $I_{\text{ToF}} = 18\text{ mA} \times \frac{20\text{ ms}}{1000\text{ ms}} = 0{,}360\text{ mA} = 360\,\mu\text{A}$;
+  \item \textbf{Processamento Cortex-M4 (2~ms lendo I²C):}
+        $I_{\text{MCU}} = 4\text{ mA} \times \frac{2\text{ ms}}{1000\text{ ms}} = 0{,}008\text{ mA} = 8\,\mu\text{A}$;
+  \item \textbf{Transmissão BLE (burst de 3~ms a 0~dBm a cada 15~s):}\\
+        $I_{\text{BLE}} = 5{,}2\text{ mA} \times \frac{3\text{ ms}}{15000\text{ ms}} \approx 1\,\mu\text{A}$;
+  \item \textbf{Corrente em repouso (Stop 2 + Standby ToF):}
+        $I_{\text{Sleep}} \approx 2{,}1\,\mu\text{A} + 5{,}0\,\mu\text{A} \approx 7{,}1\,\mu\text{A}$.
+\end{itemize}
+
+A corrente média total é de:
+\begin{equation}
+I_{\text{médio}} \approx 360 + 8 + 1 + 7{,}1 \approx \mathbf{376\,\mu\text{A} \quad (0{,}38\text{ mA})}
+\end{equation}
+
+Com um par de pilhas AA alcalinas ($2200\text{ mAh}$ úteis):
+\begin{equation}
+\text{Autonomia} = \frac{2200\text{ mAh}}{0{,}38\text{ mA} \times 24\text{ h/dia}} \approx \mathbf{241\text{ dias} \quad (\approx 8\text{ meses})}
+\end{equation}
+
+Adotando-se uma política de amostragem adaptativa (redução da taxa para 1 leitura a cada 3~s
+quando a máquina permanece desocupada por mais de 5 minutos), a corrente média cai para
+aproximadamente $135\,\mu\text{A}$, elevando a autonomia para \textbf{mais de 1,5 ano}.
+
+% =========================================================
+\section{Lógica de detecção e recomendação}
+% =========================================================
+
+\subsection{Máquina de Estados e Filtros de Presença}
+Para evitar falsas comutações por pessoas passando perto da máquina ou trocas rápidas de
+postura, o firmware do nó implementa:
+\begin{itemize}
+  \item \textbf{Histerese de distância:} Limiar de ocupação definido em $\le 70\text{ cm}$ e
+        limiar de liberação em $\ge 90\text{ cm}$.
+  \item \textbf{Filtro temporal de ocupação (5 segundos):} A distância deve permanecer abaixo
+        do limiar por 5 segundos contínuos para que o estado mude para ``Ocupado''.
+  \item \textbf{Tolerância ao descanso entre séries (60 a 90 segundos):} Caso o aluno se
+        levante para beber água ou descansar ao lado da máquina, o estado passa para
+        ``Descanso/Ocupado''. A máquina só é considerada ``Livre'' após 90 segundos
+        ininterruptos de ausência.
+\end{itemize}
+
+\subsection{Algoritmo de Recomendação}
+O aplicativo do aluno mantém a lista sequencial de exercícios prescritos (ex.: máquinas
+$\{12, 37, 5, 18\}$). Ao consultar o sistema, o algoritmo executa:
+\begin{enumerate}
+  \item Varre a lista de exercícios pendentes do aluno;
+  \item Identifica todos os aparelhos com estado ``Livre'' no broker MQTT;
+  \item Se houver máquina livre da rotina, indica imediatamente a primeira disponível;
+  \item Se todas estiverem ocupadas, calcula com base no tempo médio histórico de permanência
+        qual delas está mais próxima de ser liberada e indica o tempo estimado de espera.
+\end{enumerate}
+
+% =========================================================
+\section{Plano de testes e resultados esperados}
+% =========================================================
+
+\noindent
+\begin{tabularx}{\linewidth}{|X|X|}
+\hline
+\textbf{Cenário de teste} & \textbf{Resultado esperado} \\ \hline
+Passante caminha na frente do sensor ($< 5\text{ s}$) & Nó ignora e permanece no estado ``Livre'' \\ \hline
+Aluno senta no equipamento ($> 5\text{ s}$) & Nó comuta para ``Ocupado'', transmite BLE e broker atualiza \\ \hline
+Aluno levanta para intervalo de série ($< 60\text{ s}$) & Nó mantém o equipamento como ocupado (tolerância de descanso) \\ \hline
+Aluno encerra o treino e sai ($> 90\text{ s}$) & Nó comuta para ``Livre'' e notifica o broker \\ \hline
+Consulta de treino pelo app com máquinas livres & App recomenda a primeira máquina livre da rotina \\ \hline
+Rotina com todas as máquinas ocupadas & App informa a máquina com menor tempo previsto para término \\ \hline
+Escalabilidade de rádio (100 nós em advertising) & Gateway recebe pacotes nos canais 37--39 com perda $< 2\%$ \\ \hline
+Aferição de consumo elétrico & Corrente em modo \emph{Stop 2} aferida em bancada inferior a $10\,\mu\text{A}$ \\ \hline
+\end{tabularx}
+
+% =========================================================
+\section{Cronograma de desenvolvimento (6 semanas)}
+% =========================================================
+
+\noindent
+\begin{tabularx}{\linewidth}{|c|X|}
+\hline
+\textbf{Semana} & \textbf{Entrega} \\ \hline
+1 & Fechamento da especificação, teste do sensor VL53L1X via I²C no STM32WB e configuração inicial do rádio BLE. \\ \hline
+2 & Implementação do modo \emph{Stop 2}, filtros de histerese e temporizadores (5~s para ocupar, 90~s para liberar) com medição de consumo. \\ \hline
+3 & Estruturação dos pacotes de \emph{BLE Advertising} no nó e desenvolvimento do \emph{GAP Observer} no STM32WB Gateway. \\ \hline
+4 & Integração da pilha Wi-Fi e cliente MQTT no STM32 Gateway, estabelecendo conexão direta com o broker Mosquitto. \\ \hline
+5 & Desenvolvimento da interface do aluno (Web App), algoritmo de recomendação e injeção de carga simulada de 100 máquinas. \\ \hline
+6 & Ensaios de bancada ponta a ponta, análise de autonomia, gravação do vídeo demonstrativo e redação do relatório final. \\ \hline
+\end{tabularx}
+
+\textbf{Divisão de tarefas:} As atividades do projeto serão distribuídas entre os
+membros da equipe nas seguintes frentes (responsáveis a definir):
+\begin{itemize}
+  \item \emph{Nó sensor e baixo consumo:} firmware do nó (VL53L1X via I²C, modos \emph{Stop 2}, histerese, temporizadores e \emph{BLE Advertising});
+  \item \emph{Gateway e conectividade de rede:} firmware do STM32 Gateway (\emph{GAP Observer}, decodificação de pacotes e cliente MQTT direto sobre Wi-Fi);
+  \item \emph{Infraestrutura, software e testes:} configuração do broker MQTT, aplicativo web do aluno, algoritmo de recomendação, ensaios de bancada e relatório final.
+\end{itemize}
+
+% =========================================================
+\section{Considerações finais e validação}
+% =========================================================
+
+A evolução para a arquitetura sem fio com STM32WB, ToF e BLE soluciona a principal barreira
+física de uma academia real (cabeamento de centenas de metros). Para a avaliação prática da
+disciplina, a equipe planeja apresentar:
+\begin{enumerate}
+  \item Protótipo de bancada funcional de nó com placa NUCLEO-WB55 e sensor ToF real operando
+        a bateria;
+  \item STM32 Gateway com Wi-Fi recebendo os anúncios BLE e publicando diretamente em broker MQTT ativo;
+  \item Emulador complementar de nós BLE/MQTT para exercitar a escala de 100 máquinas em
+        tempo real no aplicativo do aluno.
+\end{enumerate}
+
+\end{document}

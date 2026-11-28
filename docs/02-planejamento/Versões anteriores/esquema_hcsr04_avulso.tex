@@ -1,0 +1,19 @@
+% Gera o PNG avulso do esquema (mesmo desenho do roteiro).
+\documentclass[tikz,border=14pt]{standalone}
+\usepackage{fontspec}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazilian]{babel}
+\usepackage{mathptmx}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta}
+\newfontfamily\codfont{DejaVu Sans Mono}[Scale=0.86]
+\definecolor{azul}{RGB}{31,73,125}
+\definecolor{verde}{RGB}{27,127,92}
+\definecolor{laranja}{RGB}{178,106,0}
+\definecolor{vermelho}{RGB}{192,57,43}
+\definecolor{cinza}{RGB}{82,96,109}
+\begin{document}
+\input{esquema_hcsr04_figura.tex}
+\end{document}

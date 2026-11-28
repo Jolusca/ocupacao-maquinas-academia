@@ -1,0 +1,26 @@
+% Folha avulsa do esquema, A4 na horizontal, para imprimir e deixar na bancada.
+\documentclass[10pt,a4paper,landscape]{article}
+\usepackage{fontspec}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazilian]{babel}
+\usepackage[margin=0.9cm]{geometry}
+\usepackage{mathptmx}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta}
+\newfontfamily\codfont{DejaVu Sans Mono}[Scale=0.86]
+\definecolor{azul}{RGB}{31,73,125}
+\definecolor{verde}{RGB}{27,127,92}
+\definecolor{laranja}{RGB}{178,106,0}
+\definecolor{vermelho}{RGB}{192,57,43}
+\definecolor{cinza}{RGB}{82,96,109}
+\pagestyle{empty}
+\begin{document}
+\begin{center}
+{\large\bfseries Esquema de ligação: HC-SR04 + ESP32-C6 SuperMini (nós N01 e N02)}\par\medskip
+\resizebox{\textwidth}{!}{\input{esquema_hcsr04_figura.tex}}\par\medskip
+{\footnotesize Projeto Ocupação de Máquinas de Academia (TI0148, UFC). A posição física dos pinos pode ser diferente na sua placa: confira a serigrafia.\par}
+\end{center}
+\end{document}

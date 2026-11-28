@@ -1,0 +1,242 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazilian]{babel}
+\usepackage[left=2cm,right=2cm,top=2cm,bottom=1.8cm]{geometry}
+\usepackage{mathptmx}
+\usepackage{setspace}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage{graphicx}
+\usepackage{titlesec}
+\usepackage{array}
+\usepackage{longtable}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,patterns,shapes.geometric}
+
+\definecolor{navy}{HTML}{1F3A5F}
+\definecolor{accent}{HTML}{E07A1F}
+
+\titleformat{\section}{\normalfont\large\bfseries}{\thesection}{1em}{\MakeUppercase}
+\titlespacing*{\section}{0pt}{10pt}{5pt}
+\setlist{itemsep=1.5pt,topsep=3pt}
+\setstretch{1.06}
+
+\begin{document}
+
+\begin{center}
+\includegraphics[height=1.6cm]{../assets/ufc_logo.png}\par
+\vspace{0.2cm}
+{\Large \textbf{ROADMAP DE DESENVOLVIMENTO}\par}
+{\large Sistema de ocupação e recomendação de equipamentos de academia com STM32\par}
+\vspace{0.2cm}
+{\small TI0148 -- Sistemas Embarcados (2026.2) \quad Professor: Dário Queiroz\par}
+{\small Plano comprimido, de 09/11 a 10/12/2026 (atualizado em 08/11/2026)\par}
+\end{center}
+
+% =========================================================
+\section{Premissas}
+% =========================================================
+
+\begin{itemize}
+  \item O desenvolvimento ocupa o \textbf{tempo restante do semestre} e continua valendo como trabalho da disciplina.
+  \item Quando o protótipo estiver pronto, o professor marca a \textbf{reunião com as empresas}. O objetivo do roadmap é chegar a esse protótipo antes da entrega.
+  \item \textbf{O projeto começa em 09/11/2026 e o semestre termina em 11/12/2026} (calendário da UFC). As avaliações finais vão de 12 a 18/12 e a síntese de notas, até 19/12. O plano original tinha 7 semanas, a partir de 26/10; como o início ficou para 09/11, ele foi \textbf{comprimido para 4 semanas de trabalho mais a semana final} (5 semanas, de 09/11 a 10/12), com os cortes da Seção~\ref{sec:cortes}.
+  \item Dia sem aula no período: 20/11 (Consciência Negra, sexta-feira), que não cai em dia de encontro. Os demais dias ficam disponíveis para o projeto.
+  \item Equipe de 5 pessoas, sem responsáveis definidos por frente. O roadmap lista pacotes de trabalho, não nomes.
+  \item A equipe se encontra às \textbf{terças e quintas às 14h}, no horário da aula de Sistemas Embarcados, que está livre para o projeto, com acesso a bancada e laboratório (Seção~\ref{sec:encontros}).
+  \item O acompanhamento é feito no \textbf{quadro do Trello} do projeto, que segue as datas deste documento.
+\end{itemize}
+
+% =========================================================
+\section{Marcos}
+% =========================================================
+
+\begin{center}
+\begin{tabular}{|L{1.3cm}|L{3.0cm}|L{11.3cm}|}
+\hline
+\textbf{Marco} & \textbf{Data-alvo} & \textbf{Critério de conclusão} \\ \hline
+M0 & qui 12/11 (fim da S1) & Placas e módulos em mãos (do laboratório ou comprados), Altium, Renode e Wokwi testados, quadro serial e API escritos, emulador v0 gerando quadros \\ \hline
+M1 & qui 26/11 (fim da S3) & Ponta a ponta mínimo: 1 nó real envia por BLE ao servidor, que mostra o estado da máquina \\ \hline
+M2 & qui 3/12 (fim da S4) & Protótipo completo em ensaio: nós reais, site (app e painel), emulador de 100 nós, cenários testados; funcionalidades congeladas \\ \hline
+M3 & ter 8/12 (S5) & \textbf{Protótipo pronto e congelado}, com roteiro de demonstração ensaiado e vídeo de reserva. Avisar o professor para marcar a reunião com as empresas \\ \hline
+Entrega & qui 10/12 (S5) & Relatório e código entregues. O semestre termina em 11/12 \\ \hline
+\end{tabular}
+\end{center}
+
+% =========================================================
+\section{Encontros da equipe}\label{sec:encontros}
+% =========================================================
+
+Os encontros são às \textbf{terças e quintas, às 14h}, no horário da
+aula. São \textbf{dois por semana}, então o plano separa o que se faz juntos do
+que se faz entre eles.
+
+\begin{itemize}
+  \item \textbf{Terça: sincronização.} Revisar o que ficou pronto, fixar a meta da
+        semana, dividir os pacotes de trabalho e destravar dependências.
+  \item \textbf{Quinta: integração e demonstração interna.} Juntar as partes, testar
+        o critério de pronto da semana e registrar as pendências.
+  \item \textbf{Bancada e laboratório:} usar os encontros para montar, ligar e depurar o
+        hardware (por exemplo, o osciloscópio para o eco do HC-SR04 e o quadro serial). Antes de
+        comprar, levantar o que o laboratório já tem (placas STM32, gravador ST-Link, módulos
+        Bluetooth, sensores).
+  \item \textbf{Entre os encontros:} cada pessoa avança no seu pacote (firmware,
+        BLE e servidor, site, emulador, simulação e documentação), com o código no
+        repositório compartilhado.
+\end{itemize}
+
+\begin{center}
+\begin{tabular}{|L{1.0cm}|L{4.3cm}|L{4.3cm}|L{5.4cm}|}
+\hline
+\textbf{Sem.} & \textbf{Terça 14h} & \textbf{Quinta 14h} & \textbf{Observação} \\ \hline
+S1 & 10/11: início, divisão dos pacotes, pedidos conferidos & 12/11: marco M0 & Antes de terça, consultar o laboratório sobre o que há disponível e fazer os pedidos do que faltar \\ \hline
+S2 & 17/11: nó e servidor básico & 19/11: BLE configurado e nó simulado & Sexta 20/11 é feriado; a semana tem só dois encontros \\ \hline
+S3 & 24/11: emulador v1 & 26/11: marco M1 (nó real até o servidor) & \\ \hline
+S4 & 1/12: calibração na bancada & 3/12: marco M2 (ensaio completo) & Congelar as funcionalidades depois do M2 \\ \hline
+S5 & 8/12: marco M3 e ensaio final & 10/12: entrega & Avisar o professor após o M3; fim do semestre em 11/12 \\ \hline
+\end{tabular}
+\end{center}
+
+% =========================================================
+\section{Cronograma}
+% =========================================================
+
+\begin{center}
+\begin{tikzpicture}[x=1.9cm,y=0.58cm,font=\scriptsize]
+  % cabeçalho
+  \node at (0.5,1.2) {\textbf{S1}}; \node at (0.5,0.6) {\tiny 9/11};
+  \node at (1.5,1.2) {\textbf{S2}}; \node at (1.5,0.6) {\tiny 16/11};
+  \node at (2.5,1.2) {\textbf{S3}}; \node at (2.5,0.6) {\tiny 23/11};
+  \node at (3.5,1.2) {\textbf{S4}}; \node at (3.5,0.6) {\tiny 30/11};
+  \node at (4.5,1.2) {\textbf{S5}}; \node at (4.5,0.6) {\tiny 7/12};
+  % grade
+  \foreach \i in {0,...,5} \draw[gray!40] (\i,0.3) -- (\i,-10.4);
+  % linhas
+  \node[anchor=east] at (-0.1,-0.5) {Compras e ambientes (Altium, Renode, Wokwi, placas)};
+  \node[anchor=east] at (-0.1,-1.5) {Contrato: quadro serial e API};
+  \node[anchor=east] at (-0.1,-2.5) {Nó: firmware (medição, estados, sinal de vida)};
+  \node[anchor=east] at (-0.1,-3.5) {Esquemático e simulação (Altium, Renode e Wokwi)};
+  \node[anchor=east] at (-0.1,-4.5) {BLE real e servidor (estados, offline)};
+  \node[anchor=east] at (-0.1,-5.5) {Estatísticas, recomendação e manutenção};
+  \node[anchor=east] at (-0.1,-6.5) {Site: app do frequentador e painel};
+  \node[anchor=east] at (-0.1,-7.5) {Emulador de 100 nós};
+  \node[anchor=east] at (-0.1,-8.5) {Integração, testes e calibração};
+  \node[anchor=east] at (-0.1,-9.5) {Demo, vídeo, relatório e material};
+  % barras (semana i cobre [i-1,i])
+  \fill[navy] (0,-0.2) rectangle (1,-0.8);
+  \fill[navy] (0,-1.2) rectangle (1,-1.8);
+  \fill[navy] (0,-2.2) rectangle (2,-2.8);
+  \fill[navy] (1,-3.2) rectangle (3,-3.8);
+  \fill[navy] (1,-4.2) rectangle (3,-4.8);
+  \fill[navy] (2,-5.2) rectangle (4,-5.8);
+  \fill[navy] (2,-6.2) rectangle (4,-6.8);
+  \fill[navy] (0,-7.2) rectangle (1,-7.8);
+  \fill[navy] (2,-7.2) rectangle (3,-7.8);
+  \fill[navy] (2,-8.2) rectangle (5,-8.8);
+  \fill[navy] (3,-9.2) rectangle (5,-9.8);
+  % marcos
+  \foreach \x/\m in {0.85/M0, 2.85/M1, 3.85/M2, 4.3/M3, 4.85/E} {
+    \node[diamond, fill=accent, draw=accent, inner sep=1.6pt] at (\x,-10.8) {};
+    \node[anchor=north, font=\tiny\bfseries] at (\x,-11.2) {\m};
+  }
+\end{tikzpicture}
+
+{\scriptsize Losangos: marcos M0 a M3 e entrega (E). Não há semana de folga: a reserva é o período de avaliações finais (12 a 18/12).\par}
+\end{center}
+
+% =========================================================
+\section{Plano semana a semana}
+% =========================================================
+
+\begin{longtable}{|L{2.5cm}|L{8.0cm}|L{4.9cm}|}
+\hline
+\textbf{Semana} & \textbf{Entregas} & \textbf{Critério de pronto} \\ \hline
+\textbf{S1} 9/11 a 13/11 \newline Fundações &
+Grupo de WhatsApp com o professor; levantamento do que o laboratório já tem, compra do que faltar (placas, módulos BLE, HC-SR04, ST-Link) e lista de material ao professor; licença do Altium pedida; repositório de código; simulador escolhido e testado (UART por socket e HC-SR04); contrato do quadro e da API; nó mínimo; emulador v0; servidor esqueleto &
+\textbf{M0} (qui 12/11): HC-SR04 lido por interrupção e contador e impresso na UART; servidor recebe quadros do emulador \\ \hline
+\textbf{S2} 16/11 a 19/11 (feriado 20/11) \newline Nó e servidor básico &
+Histerese e filtros (5~s e 90~s) com testes no PC; firmware v1 com quadro, sequência e sinal de vida; servidor com decodificação, estado por máquina e \emph{offline}; módulo BLE configurado; nó simulado nos cenários básicos &
+Cenários passante, treino, descanso e liberação corretos no simulador; quadro saindo pelo módulo BLE \\ \hline
+\textbf{S3} 23/11 a 26/11 \newline BLE e ponta a ponta &
+Servidor conecta por BLE a 1 nó real; estatísticas e recomendação v1; emulador v1 com 100 nós, perdas e nós mortos; API (estado, recomendação, estatísticas, alertas); esquemático do nó no Altium; 2º nó montado &
+\textbf{M1} (qui 26/11): nó real $\rightarrow$ servidor $\rightarrow$ estado visível \\ \hline
+\textbf{S4} 30/11 a 3/12 \newline Site, testes e congelamento &
+Site (app do frequentador e painel da gestão); alerta de manutenção preventiva; calibração dos tempos na bancada; tabela de cenários; carga com 100 nós emulados; robustez (reconexão BLE, nó offline); ensaio completo; funcionalidades congeladas; roteiro de demonstração e material para as empresas &
+\textbf{M2} (qui 3/12): protótipo completo em ensaio e congelado \\ \hline
+\textbf{S5} 7/12 a 10/12 \newline Demo e entrega &
+Correções do site; vídeo de reserva; ensaio final; professor avisado; relatório da disciplina; ajustes finais; entrega. Reunião com as empresas, marcada pelo professor (quinta 10/12 ou avaliações finais de 12 a 18/12) &
+\textbf{M3} (ter 8/12): protótipo pronto, avisar o professor. Entrega na quinta 10/12 \\ \hline
+\end{longtable}
+
+% =========================================================
+\section{Prioridades e cortes}\label{sec:cortes}
+% =========================================================
+
+\begin{itemize}
+  \item \textbf{Essencial:} nó com filtros, BLE real, servidor com estados e \emph{offline}, recomendação e app do frequentador.
+  \item \textbf{Importante:} painel da gestão (ocupação, uso e frequência por máquina), alerta de manutenção preventiva e emulador de 100 nós.
+  \item \textbf{Se sobrar tempo:} terceiro nó, ranking e horários de pico, simulação do circuito no Altium e emulador em modo aleatório.
+  \item \textbf{Fora do semestre:} nó de produto com STM32WB e visão computacional.
+\end{itemize}
+
+Para caber no semestre, \textbf{os quatro cortes do roadmap original já foram aplicados}: (1) simulação do circuito no Altium, mantendo só o esquemático; (2) ranking e horários de pico, mantendo ocupação e uso por máquina; (3) terceiro nó; (4) emulador aleatório, mantendo o roteirizado. A proposta citava o ranking das máquinas mais e menos usadas, então \textbf{o corte (2) deve ser comunicado ao professor}. Se o prazo ainda apertar, os próximos cortes são decididos com o professor.
+
+% =========================================================
+\section{Protótipo pronto: o que precisa funcionar na reunião}
+% =========================================================
+
+\begin{itemize}
+  \item 2 nós reais (3º se sobrar tempo) enviando por BLE e refletidos no site em segundos.
+  \item Cenários do nó corretos ao vivo: passante ignorado, treino ocupa, descanso mantém, liberação volta a livre.
+  \item App do frequentador mostrando a próxima máquina da rotina.
+  \item Painel da gestão com ocupação, uso e frequência por máquina e alerta de manutenção.
+  \item Emulador mostrando a escala de 100 equipamentos.
+  \item Roteiro de 5 a 7 minutos ensaiado e \textbf{vídeo de reserva} para o caso de falha ao vivo.
+\end{itemize}
+
+% =========================================================
+\section{Riscos}
+% =========================================================
+
+\begin{center}
+\begin{tabular}{|L{6.0cm}|L{9.8cm}|}
+\hline
+\textbf{Risco} & \textbf{Mitigação} \\ \hline
+Atraso na entrega dos componentes & Consultar antes o laboratório e comprar já o que faltar (S1). As peças precisam chegar até cerca de 16/11 para o módulo BLE ser configurado na S2 (19/11). Plano B com nós simulados e o mesmo servidor e site \\ \hline
+Módulo BLE barato instável & Testar 1 antes de comprar os demais; avaliar outro módulo se falhar \\ \hline
+Ponte entre o simulador e o PC (socket ou serial) não funcionar & Teste na S1; usar a bancada real como principal \\ \hline
+Altium não simular firmware & Usar só para esquemático e circuito; firmware no Renode ou no Wokwi (pesquisa já feita) \\ \hline
+Curva de aprendizado de STM32 e BLE & Começar pelo nó mínimo na S1; revisar em dupla \\ \hline
+Prazo curto: sem folga antes da entrega (10/12) & Os quatro cortes da Seção~\ref{sec:cortes} já aplicados; a reserva é o período de avaliações finais, que não deve ser planejado como trabalho; se a S1 atrasar, puxar da S2 só o que for essencial \\ \hline
+Falha na demonstração ao vivo & Vídeo de reserva e emulador como apoio \\ \hline
+Poucos encontros presenciais (2 por semana; a S2 tem só 2 por causa do feriado de 20/11) & Dividir o trabalho para andar entre os encontros e usar os encontros para integrar e destravar \\ \hline
+Provas de outras disciplinas e eventos & Levantar as datas na S1 e ajustar as semanas apertadas; a reunião com as empresas pode cair nas avaliações finais (12 a 18/12) \\ \hline
+\end{tabular}
+\end{center}
+
+% =========================================================
+\section{Depois do protótipo}
+% =========================================================
+
+\begin{enumerate}
+  \item \textbf{Reunião com as empresas}, marcada pelo professor quando o M3 for atingido (terça 8/12), na quinta 10/12 ou no período de avaliações finais (12 a 18/12).
+  \item \textbf{Piloto} em uma academia interessada, para validar fora do ambiente ideal.
+  \item \textbf{Produto:} nó STM32WB com ToF, a bateria, com \emph{BLE advertising}.
+  \item \textbf{Visão computacional} (PDI e ML), se houver investimento.
+\end{enumerate}
+
+% =========================================================
+\section{A confirmar}
+% =========================================================
+
+\begin{itemize}
+  \item \textbf{Campus e calendário aplicável} (o plano usa o de Fortaleza; em Sobral o feriado municipal e outros eventos caem em outras datas).
+  \item Datas de provas de outras disciplinas da equipe.
+  \item Se o professor aceita o corte do ranking e dos horários de pico no painel da gestão.
+  \item Se o professor aceita 2 a 3 nós reais com emulador, a Blue Pill como STM32 e o Altium para circuito com o Renode e o Wokwi para firmware.
+\end{itemize}
+
+\end{document}

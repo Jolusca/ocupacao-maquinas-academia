@@ -1,0 +1,130 @@
+% Esquema elétrico detalhado (24 cm x 13,4 cm): fonte USB -> ESP32-C6 SuperMini -> divisor -> HC-SR04.
+% Usado no roteiro (\input, girado em página própria) e no PNG avulso (esquema_hcsr04_avulso.tex).
+% Requer: \codfont (DejaVu Sans Mono) e as cores azul, verde, laranja, vermelho, cinza.
+\begin{tikzpicture}[x=1cm,y=1cm,font=\small,
+  fio/.style={line width=2pt,line cap=round},
+  interno/.style={line width=0.9pt,color=cinza!70},
+  res/.style={draw,thick,fill=white,minimum width=1.4cm,minimum height=0.5cm,inner sep=0pt},
+  resv/.style={draw,thick,fill=white,minimum width=0.5cm,minimum height=1.0cm,inner sep=0pt},
+  nome/.style={font=\codfont\small\bfseries,anchor=south east,inner sep=1pt},
+  nota/.style={font=\footnotesize,text=cinza,align=left,inner sep=1pt}]
+
+  % =============== FIOS (desenhados primeiro, ficam por baixo dos blocos) ===============
+  \draw[fio,vermelho] (3.4,11.6) -- (19.0,11.6);          % 5 V: fonte -> placa -> VCC
+  \draw[fio,black]    (3.4,3.0)  -- (19.0,3.0);           % GND comum
+  \draw[fio,azul]     (12.2,8.4) -- (19.0,8.4);           % TRIG
+  \draw[fio,laranja]  (12.2,6.4) -- (16.1,6.4);           % ECHO: GPIO1 <- J <- R1
+  \draw[fio,laranja]  (17.5,6.4) -- (19.0,6.4);           % ECHO: R1 <- sensor
+  \draw[fio,laranja]  (14.6,6.4) -- (14.6,6.0);           % J -> R2a
+  \draw[fio,cinza]    (14.6,5.0) -- (14.6,4.6);           % R2a -> R2b (ponto do meio)
+  \draw[fio,black]    (14.6,3.6) -- (14.6,3.0);           % R2b -> GND
+
+  % =============== FONTE USB ===============
+  \draw[thick,rounded corners=5pt,draw=verde,fill=verde!8] (0,2.4) rectangle (3.4,13.4);
+  \node[font=\bfseries] at (1.7,12.9) {FONTE USB 5 V};
+  \node[nota,text=black,text width=2.2cm,anchor=north west] at (0.2,12.35)
+    {\textbf{N01:} porta USB do notebook.\\[4pt]
+     \textbf{N02:} carregador ou fonte de bancada, 5~V, mínimo 500~mA.\\[4pt]
+     Fonte ruim derruba a placa (já aconteceu duas vezes).};
+  \node[anchor=east,font=\codfont\scriptsize\bfseries,text=vermelho] at (3.15,11.85) {+5 V};
+  \node[anchor=east,font=\codfont\scriptsize\bfseries] at (3.15,3.3) {GND};
+  \fill[vermelho] (3.4,11.6) circle (3pt);
+  \fill[black]    (3.4,3.0)  circle (3pt);
+
+  % =============== CABO ===============
+  \draw[dashed,draw=cinza,rounded corners=4pt] (3.75,2.7) rectangle (5.05,12.0);
+  \node[rotate=90,nota] at (4.4,7.35) {cabo USB-C de dados, curto e de boa qualidade};
+
+  % =============== PLACA ===============
+  \draw[thick,rounded corners=5pt,draw=cinza,fill=cinza!8] (5.4,2.4) rectangle (12.2,13.4);
+  \node[font=\bfseries\large] at (8.8,13.0) {ESP32-C6 SuperMini};
+  \node[nota] at (8.8,12.5) {chip ESP32-C6FH4 $\cdot$ lógica de 3,3 V};
+  % conector USB-C
+  \draw[draw=cinza,fill=cinza!30] (5.4,2.8) rectangle (5.9,11.9);
+  \node[rotate=90,font=\scriptsize] at (5.65,7.35) {conector USB-C: VBUS $\cdot$ GND $\cdot$ D+ / D$-$};
+  % regulador
+  \draw[interno,color=vermelho] (6.9,11.6) -- (6.9,10.8);
+  \fill[vermelho] (6.9,11.6) circle (2.4pt);
+  \draw[thick,fill=white] (6.3,9.6) rectangle (8.5,10.8);
+  \node[align=center,font=\scriptsize] at (7.4,10.2) {regulador\\5 V $\to$ 3,3 V};
+  \draw[interno] (7.7,9.6) -- (7.7,8.8);
+  \node[nota,anchor=west] at (7.85,9.2) {3,3 V};
+  \draw[interno,dashed] (8.5,10.2) -- (12.2,10.2);
+  \node[nota] at (9.9,10.5) {3V3 livre, não usado};
+  % chip
+  \draw[thick,fill=white] (6.3,5.2) rectangle (8.6,8.8);
+  \node[align=center,font=\scriptsize] at (7.45,7.0)
+    {\textbf{ESP32-C6FH4}\\[3pt]alimentado\\com 3,3 V\\[5pt]GPIO0: saída\\GPIO1: entrada};
+  \draw[interno] (8.6,8.4) -- (12.2,8.4);
+  \draw[interno] (8.6,6.4) -- (12.2,6.4);
+  \node[nota,anchor=north west] at (8.7,8.3) {saída digital:\\pulso de 10 \textmu{}s};
+  \node[nota,anchor=north west] at (8.7,6.3) {entrada: mede a\\largura do eco};
+  % pinos a evitar
+  \draw[thick,rounded corners=3pt,draw=vermelho,fill=vermelho!6] (6.0,3.4) rectangle (12.0,4.9);
+  \node[nota,text=black,text width=5.7cm] at (9.0,4.15)
+    {\textbf{\color{vermelho}Pinos a evitar:} GPIO4 e GPIO5 (boot, JTAG), GPIO8 (LED RGB, boot),
+     GPIO9 (botão BOOT), GPIO12 e GPIO13 (USB), GPIO15 (boot).};
+  % pinos usados, na borda direita
+  \fill[vermelho] (12.2,11.6) circle (3.2pt);  \node[nome,text=vermelho] at (11.95,11.68) {5V};
+  \fill[cinza!60] (12.2,10.2) circle (3.2pt);  \node[nome,text=cinza] at (11.95,10.28) {3V3};
+  \fill[azul]     (12.2,8.4)  circle (3.2pt);  \node[nome,text=azul] at (11.95,8.48) {GPIO0};
+  \fill[laranja]  (12.2,6.4)  circle (3.2pt);  \node[nome,text=laranja] at (11.95,6.48) {GPIO1};
+  \fill[black]    (12.2,3.0)  circle (3.2pt);  \node[nome] at (11.95,3.08) {GND};
+
+  % =============== DIVISOR DE TENSÃO ===============
+  \node[res] at (16.8,6.4) {};
+  \node[font=\small\bfseries,anchor=south] at (16.8,6.7) {R1 = 1 k$\Omega$};
+  \node[nota,anchor=north] at (16.8,6.1) {marrom $\cdot$ preto $\cdot$ vermelho};
+  \node[resv] at (14.6,5.5) {};
+  \node[resv] at (14.6,4.1) {};
+  \node[font=\scriptsize\bfseries,anchor=east] at (14.3,5.5) {R2a = 1 k$\Omega$};
+  \node[font=\scriptsize\bfseries,anchor=east] at (14.3,4.1) {R2b = 1 k$\Omega$};
+  \node[nota,anchor=east] at (14.3,4.8) {em série};
+  \fill[laranja] (14.6,6.4) circle (3.4pt);
+  \fill[black]   (14.6,3.0) circle (3.4pt);
+  \node[font=\scriptsize\bfseries,text=laranja,anchor=south] at (14.6,6.65) {3,33 V};
+  \draw[thick,rounded corners=3pt,draw=laranja,fill=laranja!6] (15.3,3.4) rectangle (18.5,5.6);
+  \node[nota,text=black,text width=3.0cm] at (16.9,4.5)
+    {\textbf{Divisor de tensão}\\
+     V(GPIO1) = 5 V $\times$ 2/(1+2)\\
+     $=$ 3,33 V\\
+     corrente $\approx$ 1,7 mA\\
+     (2,2 k + 3,3 k dá 3,0 V)};
+
+  % rótulos dos fios
+  \node[font=\scriptsize\bfseries,text=vermelho,anchor=south] at (15.6,11.7) {5 V (VBUS): alimenta o sensor};
+  \node[font=\scriptsize\bfseries,text=azul,anchor=south] at (15.6,8.5) {TRIG: 3,3 V (pulso de 10 \textmu{}s)};
+  \node[font=\scriptsize\bfseries,text=laranja,anchor=south] at (18.25,6.5) {ECHO: 5 V};
+  \node[font=\scriptsize\bfseries,anchor=north] at (16.8,2.9) {GND comum};
+
+  % =============== SENSOR ===============
+  \draw[thick,rounded corners=5pt,draw=laranja,fill=laranja!10] (19.0,2.4) rectangle (24.0,13.4);
+  \node[font=\bfseries\large] at (21.5,13.0) {HC-SR04};
+  \node[nota] at (21.5,12.5) {módulo ultrassônico};
+  \fill[vermelho] (19.0,11.6) circle (3.2pt);
+  \fill[azul]     (19.0,8.4)  circle (3.2pt);
+  \fill[laranja]  (19.0,6.4)  circle (3.2pt);
+  \fill[black]    (19.0,3.0)  circle (3.2pt);
+  \node[anchor=west,font=\codfont\small\bfseries,text=vermelho] at (19.2,11.6) {VCC};
+  \node[anchor=west,font=\codfont\small\bfseries,text=azul]     at (19.2,8.4)  {TRIG};
+  \node[anchor=west,font=\codfont\small\bfseries,text=laranja]  at (19.2,6.4)  {ECHO};
+  \node[anchor=west,font=\codfont\small\bfseries]               at (19.2,3.0)  {GND};
+  \node[nota,anchor=west,text=black,text width=3.2cm] at (20.6,11.6) {alimentação de 5 V, cerca de 15 mA};
+  \node[nota,anchor=west,text=black,text width=3.2cm] at (20.6,8.4)  {entrada: nível alto por 10 \textmu{}s dispara a medida};
+  \node[nota,anchor=west,text=black,text width=3.2cm] at (20.6,6.4)  {saída: pulso de 5 V; largura = ida e volta do som (58 \textmu{}s por cm)};
+  \node[nota,anchor=west,text=black,text width=3.2cm] at (20.6,3.0)  {terra};
+  % transdutores
+  \draw[thick,fill=white] (20.9,4.9) circle (0.55);  \node[font=\bfseries] at (20.9,4.9) {T};
+  \draw[thick,fill=white] (22.7,4.9) circle (0.55);  \node[font=\bfseries] at (22.7,4.9) {R};
+  \node[nota,anchor=north] at (21.8,4.2) {emissor e receptor, 40 kHz};
+
+  % =============== NOTAS ===============
+  \draw[thick,rounded corners=4pt,draw=azul,fill=azul!5] (0,0) rectangle (24,2.0);
+  \node[nota,text=black,anchor=west,text width=11.3cm] at (0.3,1.0)
+    {\textbf{1.} A fonte alimenta a placa e, pelo pino 5V (VBUS do USB), também o sensor.\\[3pt]
+     \textbf{2.} O GND da fonte, da placa e do sensor é o mesmo (GND comum).};
+  \node[nota,text=black,anchor=west,text width=11.3cm] at (12.3,1.0)
+    {\textbf{3.} Com o USB ligado, não alimente o pino 5V por outra fonte (sem diodo).\\[3pt]
+     \textbf{4.} Nomes e ordem dos pinos variam entre fabricantes: confira a serigrafia.
+     Fios sugeridos: vermelho 5 V, preto GND, azul TRIG, laranja ECHO.};
+\end{tikzpicture}

@@ -1,0 +1,519 @@
+\documentclass[aspectratio=169,11pt]{beamer}
+
+\usepackage[T1]{fontenc}
+\usepackage[brazilian]{babel}
+\usepackage{lmodern}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,fit}
+
+\definecolor{navy}{HTML}{1F3A5F}
+\definecolor{accent}{HTML}{E07A1F}
+\definecolor{soft}{HTML}{EAF0F7}
+
+\setlist[itemize]{label=\color{accent}\scriptsize$\blacksquare$,itemsep=3pt,topsep=2pt,parsep=0pt,leftmargin=1.3em}
+\hyphenpenalty=10000
+\exhyphenpenalty=10000
+
+\setbeamertemplate{navigation symbols}{}
+\setbeamersize{text margin left=1.0cm,text margin right=1.0cm}
+\setbeamercolor{structure}{fg=navy}
+\setbeamercolor{block title}{bg=navy,fg=white}
+\setbeamercolor{block body}{bg=soft,fg=black}
+\setbeamertemplate{footline}{\hfill{\color{navy}\footnotesize\insertframenumber}\hspace{0.8cm}\vspace{0.3cm}}
+
+\setbeamertemplate{frametitle}{%
+  \begin{tikzpicture}[remember picture,overlay]
+    \fill[navy] (current page.north west) rectangle ([yshift=-1.15cm]current page.north east);
+    \fill[accent] ([yshift=-1.15cm]current page.north west) rectangle ([yshift=-1.22cm]current page.north east);
+    \node[anchor=west,text=white,font=\large\bfseries] at ([xshift=1.0cm,yshift=-0.58cm]current page.north west) {\insertframetitle};
+  \end{tikzpicture}%
+  \vskip 0.6cm
+}
+
+\tikzset{
+  box/.style={draw=navy, thick, rounded corners=3pt, align=center, minimum height=0.85cm, fill=soft},
+  hot/.style={draw=accent, thick, rounded corners=3pt, align=center, fill=accent!15}
+}
+
+\begin{document}
+\raggedright
+
+% ---------------------------------------------------------
+% 1. Título
+% ---------------------------------------------------------
+\begin{frame}[plain]
+  \begin{tikzpicture}[remember picture,overlay]
+    \fill[navy] (current page.north west) rectangle ([yshift=-0.35cm]current page.north east);
+    \fill[accent] ([yshift=-0.35cm]current page.north west) rectangle ([yshift=-0.45cm]current page.north east);
+  \end{tikzpicture}
+  \vspace{0.5cm}
+  \begin{columns}[c]
+    \begin{column}{0.17\textwidth}
+      \includegraphics[height=2.3cm]{../assets/ufc_logo.png}
+    \end{column}
+    \begin{column}{0.80\textwidth}
+      {\color{navy}\Large\bfseries Ocupação inteligente de equipamentos de academia\par}
+      \vspace{4pt}
+      {\normalsize Proposta comercial e técnica do protótipo com STM32\par}
+    \end{column}
+  \end{columns}
+  \vfill
+  {\footnotesize
+  Antonio Marcos Justino Carneiro \quad João Victor Leandro Nunes \quad João Lucas Oliveira Mota\par
+  Anderson Moura Costa do Nascimento \quad Álvaro Siqueira Galvão\par
+  TI0148 -- Sistemas Embarcados (2026.2) \quad Professor: Dário Queiroz \quad Outubro de 2026\par}
+\end{frame}
+
+% ---------------------------------------------------------
+% 2. Desafio
+% ---------------------------------------------------------
+\begin{frame}[t]{O desafio de toda academia}
+  \large
+  \begin{itemize}
+    \item Frequentadores perdem tempo procurando e esperando equipamentos
+    \item Máquinas muito disputadas geram fila, enquanto outras ficam esquecidas
+    \item A manutenção costuma acontecer só depois que a máquina quebra
+    \item Compras e mudanças de layout são decididas sem dados de uso
+  \end{itemize}
+  \vspace{0.4cm}
+  \begin{block}{Pergunta}
+    Quanto do seu salão você realmente enxerga em tempo real?
+  \end{block}
+\end{frame}
+
+% ---------------------------------------------------------
+% 3. Solução
+% ---------------------------------------------------------
+\begin{frame}[t]{A solução}
+  \centering
+  \begin{tikzpicture}[font=\small, >=Stealth]
+    \node[box, minimum width=2.3cm] (n1) {Sensor 1};
+    \node[box, minimum width=2.3cm, below=0.25cm of n1] (n2) {Sensor 2};
+    \node[below=0.0cm of n2] (dots) {$\vdots$};
+    \node[box, minimum width=2.3cm, below=0.0cm of dots] (n3) {Sensor $N$};
+    \node[font=\scriptsize, below=0.1cm of n3, align=center] {um por equipamento};
+    \node[box, minimum width=3.0cm, minimum height=3.6cm, right=1.5cm of n2] (srv) {\textbf{Central}\\[3pt]\footnotesize recebe os dados\\\footnotesize estados e estatísticas\\\footnotesize recomendação\\\footnotesize alertas};
+    \node[hot, minimum width=3.4cm, minimum height=1.5cm, right=1.5cm of srv, yshift=1.0cm] (app) {\textbf{App do frequentador}\\\footnotesize próxima máquina livre};
+    \node[hot, minimum width=3.4cm, minimum height=1.5cm, below=0.5cm of app] (pan) {\textbf{Painel da gestão}\\\footnotesize uso, frequência e manutenção};
+    \draw[->, thick] (n1.east) -- (srv.west |- n1.east);
+    \draw[->, thick] (n2.east) -- node[above, font=\scriptsize]{sem fio} (srv.west |- n2.east);
+    \draw[->, thick] (n3.east) -- (srv.west |- n3.east);
+    \draw[->, thick] (srv.east |- app.west) -- (app.west);
+    \draw[->, thick] (srv.east |- pan.west) -- (pan.west);
+  \end{tikzpicture}
+
+  \vspace{0.3cm}
+  {\small Sensores discretos fixados na estrutura de cada máquina, sem alterar o equipamento e sem câmeras.\par}
+\end{frame}
+
+% ---------------------------------------------------------
+% 4. Benefícios
+% ---------------------------------------------------------
+\begin{frame}[t]{O que cada lado ganha}
+  \begin{columns}[T]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Frequentador}
+        \small
+        \begin{itemize}
+          \item Vê a \textbf{próxima máquina livre} da sua rotina
+          \item Recebe a \textbf{estimativa de espera} quando tudo está ocupado
+          \item Informação em tempo real
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.50\textwidth}
+      \begin{block}{Academia (cliente do sistema)}
+        \small
+        \begin{itemize}
+          \item Ocupação de cada equipamento em tempo real
+          \item Uso e frequência por máquina, mais e menos usadas, horários de pico
+          \item \textbf{Alerta de manutenção preventiva}
+          \item Base objetiva para layout e compra de equipamentos
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ---------------------------------------------------------
+% 5. Gestão de uso e manutenção
+% ---------------------------------------------------------
+\begin{frame}[t]{Gestão de uso e manutenção preventiva: como é calculado}
+  \small
+  \begin{itemize}
+    \item Cada ciclo \emph{ocupada $\rightarrow$ livre} é registrado como um \textbf{uso}, com horário e duração
+    \item Por equipamento: tempo total de uso, número de usos e duração média
+    \item \textbf{Mais e menos usadas:} ranking por tempo total e por frequência
+    \item \textbf{Horários de pico:} uso agregado por hora do dia
+    \item \textbf{Manutenção preventiva:} alerta quando as horas ou os usos acumulados atingem um limite configurável por equipamento
+    \item \textbf{Estimativa de liberação:} duração média de uso e tempo desde que a máquina ficou ocupada
+  \end{itemize}
+\end{frame}
+
+% ---------------------------------------------------------
+% 6. Arquitetura técnica
+% ---------------------------------------------------------
+\begin{frame}[t]{Arquitetura do protótipo}
+  \centering
+  \begin{tikzpicture}[font=\scriptsize, >=Stealth]
+    \node[box, minimum width=2.6cm] (s1) {Sensor ultrassônico\\HC-SR04};
+    \node[box, minimum width=2.6cm, below=0.35cm of s1] (mcu) {\textbf{STM32F103C8}\\(Blue Pill)};
+    \node[box, minimum width=2.6cm, below=0.35cm of mcu] (ble) {Módulo BLE serial\\(HM-10/JDY-23)};
+    \draw[->] (s1) -- node[right]{Trig / Eco} (mcu);
+    \draw[->] (mcu) -- node[right]{UART} (ble);
+    \node[draw=navy, dashed, thick, rounded corners=4pt, fit=(s1)(mcu)(ble), inner sep=7pt, label={[font=\scriptsize\bfseries]above:Nó ($\times$ 2 a 3 reais)}] (grp) {};
+    \node[box, minimum width=3.3cm, minimum height=2.8cm, right=1.7cm of grp] (srv) {\textbf{Servidor (PC de mesa)}\\[2pt]Python (BLE)\\estados livre/ocupada/offline\\estatísticas e manutenção\\recomendação e API};
+    \node[hot, minimum width=2.9cm, minimum height=1.2cm, right=1.4cm of srv, yshift=0.9cm] (app) {\textbf{App do frequentador}};
+    \node[hot, minimum width=2.9cm, minimum height=1.2cm, below=0.4cm of app] (pan) {\textbf{Painel da gestão}};
+    \node[box, dashed, minimum width=3.3cm, below=0.5cm of srv] (emu) {Emulador de até 100 nós};
+    \draw[->, thick] (grp.east) -- node[above]{BLE} (srv.west);
+    \draw[->, thick] (srv.east |- app.west) -- (app.west);
+    \draw[->, thick] (srv.east |- pan.west) -- (pan.west);
+    \draw[->, thick, dashed] (emu) -- (srv);
+  \end{tikzpicture}
+
+  \vspace{0.1cm}
+  {\footnotesize STM32 \textbf{só nos nós}; o servidor e o site rodam em um computador comum.\par}
+\end{frame}
+
+% ---------------------------------------------------------
+% 7. Protótipo x produto
+% ---------------------------------------------------------
+\begin{frame}[t]{Protótipo de baixo custo e versão de produto}
+  \renewcommand{\arraystretch}{1.35}
+  \footnotesize
+  \begin{tabular}{@{}p{2.2cm}p{5.4cm}p{5.4cm}@{}}
+    \toprule
+     & \textbf{Protótipo (Fase 1)} & \textbf{Produto (Fase 2)} \\
+    \midrule
+    Nó & Blue Pill (STM32F103C8), módulo BLE serial e HC-SR04, alimentado por USB & STM32WB com sensor ToF, a bateria e sem fios \\
+    Comunicação & O servidor conecta-se por BLE a 2 ou 3 nós & \emph{BLE advertising}, sem conexão, para até 100 nós \\
+    Escala de 100 & Emulador de nós & Nós reais \\
+    Detecção & Distância por ultrassom & ToF e, com investimento, câmeras com visão computacional \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+% ---------------------------------------------------------
+% 8. Nó: hardware e firmware
+% ---------------------------------------------------------
+\begin{frame}[t]{O nó sensor: hardware e firmware}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Hardware}
+        \footnotesize
+        \begin{itemize}
+          \item \textbf{Blue Pill:} STM32F103C8T6, Cortex-M3 a 72~MHz
+          \item \textbf{HC-SR04:} mede de 2~cm a 4~m; pulso de 10~$\mu$s no Trig e largura do pulso de Eco proporcional ao tempo de ida e volta
+          \item \textbf{Módulo BLE serial} na UART
+          \item ST-Link V2 para gravar; alimentação por USB no protótipo
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Firmware}
+        \footnotesize
+        \begin{itemize}
+          \item Temporizador periódico dispara a medição; interrupção nas duas bordas e contador livre medem o Eco
+          \item Distância = tempo $\times$ 343~m/s $\div$ 2
+          \item Histerese, filtros de presença e de ausência (próximo slide)
+          \item CPU em modo \emph{Sleep} entre as medições
+          \item Quadro curto enviado pela UART ao módulo BLE
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ---------------------------------------------------------
+% 9. Máquina de estados
+% ---------------------------------------------------------
+\begin{frame}[t]{Máquina de estados do nó}
+  \centering
+  \begin{tikzpicture}[font=\small, >=Stealth, st/.style={draw=navy, thick, circle, fill=soft, minimum size=1.9cm, align=center}]
+    \node[st] (l) {\textbf{LIVRE}};
+    \node[st, right=4.6cm of l, fill=accent!15, draw=accent] (o) {\textbf{OCUPADA}};
+    \draw[->, thick] (l.north east) to[bend left=25] node[above, font=\scriptsize, align=center]{distância $\leq$ 70~cm\\por 5~s} (o.north west);
+    \draw[->, thick] (o.south west) to[bend left=25] node[below, font=\scriptsize, align=center]{distância $\geq$ 90~cm\\por 90~s} (l.south east);
+    \draw[->, thick] (l.north west) to[out=140, in=100, looseness=7] node[above=0.3cm, font=\scriptsize, align=center]{passante ($<$ 5~s):\\ignora} (l.north);
+    \draw[->, thick] (o.north east) to[out=40, in=80, looseness=7] node[above=0.3cm, font=\scriptsize, align=center]{descanso ($<$ 90~s):\\mantém} (o.north);
+  \end{tikzpicture}
+
+  \vspace{0.2cm}
+  {\footnotesize Histerese: chegada a 70~cm e saída a 90~cm evitam oscilação na borda de detecção. Os tempos são ajustáveis e serão calibrados nos testes.\par}
+\end{frame}
+
+% ---------------------------------------------------------
+% 10. Protocolo
+% ---------------------------------------------------------
+\begin{frame}[t]{Comunicação e protocolo}
+  \begin{columns}[T]
+    \begin{column}{0.50\textwidth}
+      \begin{block}{Quadro do nó}
+        \footnotesize
+        \texttt{N02,1,17}
+        \begin{itemize}
+          \item \texttt{02}: ID do nó
+          \item \texttt{1}: ocupada (\texttt{0}: livre)
+          \item \texttt{17}: número de sequência
+          \item Repetido a cada 15~s como \textbf{sinal de vida}
+          \item A sequência detecta perdas e duplicatas
+          \item Sem sinal de vida por um intervalo configurável, o servidor marca o nó como \emph{offline}
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Rádio}
+        \footnotesize
+        \begin{itemize}
+          \item \textbf{Protótipo:} o servidor conecta-se por BLE aos 2 ou 3 nós (biblioteca \emph{bleak})
+          \item \textbf{Produto:} \emph{BLE advertising}, sem conexão, o que permite 100 nós sem esgotar conexões e com baixo consumo
+          \item Quadro de produto inclui o nível de bateria
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ---------------------------------------------------------
+% 11. Servidor, recomendação e site
+% ---------------------------------------------------------
+\begin{frame}[t]{Servidor, recomendação e site}
+  \begin{columns}[T]
+    \begin{column}{0.50\textwidth}
+      \begin{block}{Servidor (Python, PC de mesa)}
+        \footnotesize
+        \begin{itemize}
+          \item Recebe os quadros, decodifica e mantém o estado de cada máquina
+          \item Acumula uso e frequência (slide 5)
+          \item \textbf{Recomendação:} dada a rotina do frequentador (por exemplo, máquinas 12, 37, 5 e 18), devolve a primeira livre; se todas estiverem ocupadas, a que deve liberar primeiro
+          \item Expõe uma API para o site
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Site (navegador)}
+        \footnotesize
+        \begin{itemize}
+          \item \textbf{App do frequentador:} informa a rotina e vê a próxima máquina
+          \item \textbf{Painel da gestão:} ocupação, uso e frequência por máquina, ranking, horários de pico e alertas
+          \item Atualização em tempo real
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ---------------------------------------------------------
+% 12. Emulador
+% ---------------------------------------------------------
+\begin{frame}[t]{Emulador de até 100 nós}
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+      \begin{block}{Como funciona}
+        \footnotesize
+        \begin{itemize}
+          \item Script que gera os \textbf{mesmos quadros} dos nós reais e os entrega ao servidor
+          \item Os 2 ou 3 nós reais usam os IDs iniciais; o emulador cobre os demais
+          \item Cada nó virtual segue um comportamento: livre, chega alguém, treina, descansa, sai
+          \item Injeta perdas de quadro, atraso, nós mortos e passantes
+          \item Modo \textbf{roteirizado} (cenários repetíveis) e \textbf{aleatório} (carga contínua)
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \begin{block}{Como se valida}
+        \footnotesize
+        \begin{itemize}
+          \item O emulador conhece o \textbf{estado verdadeiro} e compara com o que o servidor mostra
+          \item Relógio acelerado para testar tempos de 90~s sem espera
+          \item \textbf{Limite:} testa servidor e site, não o firmware nem o rádio real
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ---------------------------------------------------------
+% 13. Simulação
+% ---------------------------------------------------------
+\begin{frame}[t]{Simulação e ferramentas}
+  \begin{columns}[T]
+    \begin{column}{0.35\textwidth}
+      \begin{block}{Altium Designer}
+        \footnotesize\raggedright
+        \begin{itemize}
+          \item Esquemático do nó
+          \item Circuito: divisor de tensão do Eco (5~V para 3,3~V) e alimentação
+          \item Eco imitado por fonte de pulso
+          \item \textbf{Limite:} simulador SPICE, sem evidência de executar firmware
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.31\textwidth}
+      \begin{block}{Renode (principal)}
+        \footnotesize\raggedright
+        \begin{itemize}
+          \item Código aberto; Linux, Windows e Mac
+          \item Blue Pill F103: UART, GPIO, timers, I\textsuperscript{2}C, EXTI
+          \item UART por socket TCP até o servidor
+          \item Sem ADC e SPI (não usados)
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.30\textwidth}
+      \begin{block}{Wokwi (alternativa)}
+        \footnotesize\raggedright
+        \begin{itemize}
+          \item Blue Pill com o F103C8, o chip real
+          \item HC-SR04 pronto (2 a 400~cm)
+          \item Testes automatizados por cenários
+          \item Sem DMA e RTC; ADC parcial
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+  \vfill
+  {\scriptsize O módulo BLE e o eco real não são simulados: viram serial ou socket e imitação. O Proteus (F103C6, só Windows) fica como opção. Teste de viabilidade na semana 1.\par}
+\end{frame}
+
+% ---------------------------------------------------------
+% 14. Premissas e limitações
+% ---------------------------------------------------------
+\begin{frame}[t]{Premissas do protótipo e limitações}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Premissas (ambiente ideal)}
+        \footnotesize
+        \begin{itemize}
+          \item Sensor na posição correta, sem obstruções
+          \item Cobertura BLE adequada
+          \item Frequentadores com comportamento esperado
+          \item Passantes tratados pelo filtro de presença
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Limitações}
+        \footnotesize
+        \begin{itemize}
+          \item O ultrassom pode pegar quem passa; o filtro reduz, mas não elimina
+          \item Conexão BLE limita os nós reais; 100 nós exigem \emph{advertising}
+          \item Rádio e eco reais não são simulados
+          \item Resultados valem para o ambiente ideal, não para uma academia real
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ---------------------------------------------------------
+% 15. Validação
+% ---------------------------------------------------------
+\begin{frame}[t]{Como vamos validar}
+  \renewcommand{\arraystretch}{1.2}
+  \footnotesize
+  \begin{tabular}{@{}p{6.3cm}p{6.3cm}@{}}
+    \toprule
+    \textbf{Cenário} & \textbf{Resultado esperado} \\
+    \midrule
+    Passante ($<$ 5 s) & Continua livre \\
+    Frequentador treina ($>$ 5 s) & Ocupada; site atualiza \\
+    Descanso entre séries ($<$ 60 s) & Continua ocupada \\
+    Aparelho liberado ($>$ 90 s) & Livre \\
+    Nó sem sinal de vida & Marcado como \emph{offline} \\
+    100 nós emulados & Painel e recomendação corretos \\
+    Uso acumulado atinge o limite & Alerta de manutenção preventiva \\
+    Uso e frequência de vários equipamentos & Ranking e horários de pico corretos \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+% ---------------------------------------------------------
+% 16. Evolução
+% ---------------------------------------------------------
+\begin{frame}[t]{Evolução com investimento}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Nó de produto}
+        \footnotesize
+        \begin{itemize}
+          \item STM32WB com sensor ToF, a bateria, sem fios e sem tomada
+          \item \emph{BLE advertising} para até 100 nós
+          \item Autonomia estimada em meses (a validar)
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Visão computacional (PDI e ML)}
+        \footnotesize
+        \begin{itemize}
+          \item Câmeras no teto detectam pessoas por região de cada máquina
+          \item Inferência na borda, em hardware com NPU (por exemplo, família STM32N6), sem guardar imagens (LGPD)
+          \item Mesmo servidor, app e painel; os nós ToF ficam como validação
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+  \vspace{0.2cm}
+  {\scriptsize Por que a visão não entra agora: exige hardware com câmera e NPU, que o simulador não cobre, e dados reais da academia.\par}
+\end{frame}
+
+% ---------------------------------------------------------
+% 17. Cronograma
+% ---------------------------------------------------------
+\begin{frame}[t]{Cronograma (6 semanas)}
+  \renewcommand{\arraystretch}{1.3}
+  \footnotesize
+  \begin{tabular}{@{}cp{11.3cm}@{}}
+    \toprule
+    \textbf{Sem.} & \textbf{Entrega} \\
+    \midrule
+    1 & Especificação, Blue Pill gravada, HC-SR04 e módulo BLE na UART, licença do Altium e teste de viabilidade (Altium, Renode e Wokwi) \\
+    2 & Nó: histerese, temporizadores, quadro serial e sinal de vida \\
+    3 & Servidor: conexão BLE, decodificação, estados e \emph{offline} \\
+    4 & Recomendação, estatísticas de uso e frequência, manutenção preventiva e API \\
+    5 & Site (app do frequentador e painel da gestão) e emulador de 100 nós \\
+    6 & Testes de ponta a ponta, vídeo e relatório \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+% ---------------------------------------------------------
+% 19. Próximos passos
+% ---------------------------------------------------------
+\begin{frame}[t]{Próximos passos e pontos a confirmar}
+  \begin{columns}[T]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Piloto na academia}
+        \footnotesize
+        \begin{itemize}
+          \item Instalar sensores em um conjunto de equipamentos
+          \item Acompanhar o uso real por um período
+          \item Ajustar o sistema à rotina da academia
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.50\textwidth}
+      \begin{block}{Perguntas ao professor}
+        \footnotesize
+        \begin{itemize}
+          \item São aceitos 2 ou 3 nós reais com emulador para a escala de 100?
+          \item A Blue Pill com módulo BLE externo é aceita como STM32 dos nós?
+          \item Altium para esquemático e circuito, e Renode e Wokwi para o firmware, atende à recomendação de simulação?
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+  \vfill
+  \begin{center}
+    {\color{navy}\Large\bfseries Perguntas e conversa}
+  \end{center}
+\end{frame}
+
+\end{document}

@@ -62,8 +62,8 @@ HOLE_SLOT = 1.2         # o furo é alongado em x por esse tanto: tolera +-0,6 m
 HOLE_CHAMFER = 1.0      # chanfro por fora, para não cortar o cone de som
 SENSOR_RECESS = 0.0     # quanto a frente dos cilindros fica atrás da face de fora
 # conector Dupont do sensor: bloco único de 4 pinos, rígido, deitado no plano da placa e saindo pela borda LONGA (foto de 28/11)
-CONN_W, CONN_OUT, CONN_T = 10.2, 12.0, 3.0   # largura (4 x 2,54), quanto passa da borda [CONFIRMAR com régua], espessura
-CONN_LANE = 15.0        # faixa livre ao lado do sensor: CONN_OUT + ~3 mm para o fio sair do bloco e dobrar
+CONN_W, CONN_OUT, CONN_T = 10.2, 12.0, 3.0   # largura (4 x 2,54), quanto passa da borda (medido na foto de 28/11: 12 mm), espessura
+CONN_LANE = 17.0        # faixa livre ao lado do sensor: CONN_OUT + ~5 mm para o fio sair do bloco e fazer a curva (raio ~4-5 mm)
 
 # --- layout interno (x a partir da parede interna)
 BOARD_X0 = 1.0
@@ -347,8 +347,8 @@ def main(out):
         erros.append(f"conector USB-C a {dist_parede:.2f} mm da parede (esperado 0 a 2,5)")
     # a faixa do conector: bloco + saída do fio precisam caber entre a borda do sensor e a parede
     folga_faixa = (sensor_y0 - WALL) - CONN_OUT
-    if folga_faixa < 2.5:
-        erros.append(f"faixa do conector com só {folga_faixa:.1f} mm de sobra para o fio dobrar (mínimo 2,5)")
+    if folga_faixa < 4.0:
+        erros.append(f"faixa do conector com só {folga_faixa:.1f} mm de sobra para o fio curvar (mínimo 4,0)")
     # os cilindros têm que estar a 26 mm um do outro e centrados no furo
     cc = abs(hole_xs[1] - hole_xs[0])
     # chanfro do furo do sensor: tem de ser vazio dentro do cone (raio HOLE_D/2 + 0,5 a 0,2 mm da face) e sólido fora dele

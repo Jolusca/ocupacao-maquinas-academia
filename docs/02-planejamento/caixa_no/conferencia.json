@@ -1,19 +1,19 @@
 {
   "externa_mm": [
     119.5,
-    40.5,
+    42.5,
     30.0
   ],
   "interna_mm": [
     115.5,
-    36.5,
+    38.5,
     26.0
   ],
   "furos_sensor": {
     "diametro": 16.8,
     "distancia_centros": 26.0,
     "centro_x": 93.25,
-    "centro_y": 27.5
+    "centro_y": 29.5
   },
   "abertura_usb": {
     "centro_x": 17.86,
@@ -29,13 +29,13 @@
       82.0,
       104.5
     ],
-    "centro_y": 20.2,
+    "centro_y": 21.2,
     "distancia_da_antena_mm": 50.1,
     "parede_atras_do_ima_mm": 1.8
   },
   "faixa_do_conector_mm": {
     "conector_sai": 12.0,
-    "sobra_para_o_fio": 3.0
+    "sobra_para_o_fio": 5.0
   },
   "abracadeira": {
     "folga_fenda_ao_plugue_mm": 1.42,
@@ -55,25 +55,25 @@
     "limites_mm": [
       [
         14.6,
-        16.2,
+        17.2,
         29.4
       ],
       [
         36.4,
-        24.2,
+        25.2,
         31.0
       ]
     ]
   },
   "pecas_stl": {
-    "base": 30.2,
-    "tampa_N01": 11.3,
-    "tampa_N02": 11.29,
-    "teste_sensor": 8.33,
+    "base": 30.89,
+    "tampa_N01": 11.78,
+    "tampa_N02": 11.78,
+    "teste_sensor": 8.61,
     "teste_usb": 4.26
   },
-  "volume_base_cm3": 30.2,
-  "volume_tampa_cm3": 11.3,
+  "volume_base_cm3": 30.89,
+  "volume_tampa_cm3": 11.78,
   "colisoes": {
     "placa_perfurada": {
       "na_base_mm3": 0.0,
